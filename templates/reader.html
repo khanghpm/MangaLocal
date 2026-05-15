@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="no-referrer" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <title>{{ current_display }} | {{ manga_title }} - MangaLocal</title>
+  <style>
+   /* Custom scrollbar for a professional look */
+   ::-webkit-scrollbar {
+    width: 6px;
+   }
+   ::-webkit-scrollbar-track {
+    background: #000;
+   }
+   ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 10px;
+   }
+   ::-webkit-scrollbar-thumb:hover {
+    background: #444;
+   }
+  </style>
+ </head>
+ <body class="bg-black text-gray-200 min-h-screen flex flex-col">
+{% include 'nav.html' %}
+
+  <div class="sticky top-[72px] z-40 bg-black/95 backdrop-blur-md border-b border-gray-800 py-3 shadow-2xl">
+   <div class="max-w-7xl mx-auto px-4 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-4 min-w-0">
+     <a href="/manga/{{ manga_id }}" aria-label="Back to Manga Info" class="bg-gray-800 p-2 rounded hover:bg-gray-700 transition flex-shrink-0">
+      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+     </a>
+     <a href="/manga/{{ manga_id }}" class="text-xs font-bold text-white truncate hover:text-orange-500 transition hidden sm:block"> {{ manga_title }} </a>
+    </div>
+
+    <div class="flex items-center gap-1">
+     <select aria-label="Select Chapter" onchange="window.location.href = '/reader/' + this.value" class="bg-gray-900 border border-gray-700 rounded-l px-3 py-2 text-[10px] font-bold text-orange-500 outline-none focus:border-orange-500 transition cursor-pointer">
+      {% for chap in all_chapters %}
+    <option value="{{ chap.id }}" {% if chap.num|string == current_num|string %}selected{% endif %}>{{ chap.display }}</option>
+      {% endfor %}
+     </select>
+
+     {% if prev_id %}
+     <a href="/reader/{{ prev_id }}" class="bg-gray-800 hover:bg-gray-700 border-l border-gray-700 px-4 py-2 text-[10px] font-bold text-gray-300 uppercase transition flex items-center gap-1.5"> <span class="text-[8px]">◀◀</span> PREV </a>
+     {% else %}
+     <span class="bg-gray-800/50 text-gray-600 border-l border-gray-700 px-4 py-2 text-[10px] font-bold uppercase cursor-not-allowed flex items-center gap-1.5"> <span class="text-[8px]">◀◀</span> PREV </span>
+     {% endif %} {% if next_id %}
+     <a href="/reader/{{ next_id }}" class="bg-gray-800 hover:bg-gray-700 border-l border-gray-700 rounded-r px-4 py-2 text-[10px] font-bold text-gray-300 uppercase transition flex items-center gap-1.5"> NEXT <span class="text-[8px]">▶▶</span> </a>
+     {% else %}
+     <span class="bg-gray-800/50 text-gray-600 border-l border-gray-700 rounded-r px-4 py-2 text-[10px] font-bold uppercase cursor-not-allowed flex items-center gap-1.5"> NEXT <span class="text-[8px]">▶▶</span> </span>
+     {% endif %}
+    </div>
+
+    <div class="flex items-center gap-2">
+     <a href="/toggle_bookmark/{{ manga_id }}" aria-label="Bookmark Manga" title="Bookmark" class="p-2 bg-gray-800 rounded hover:bg-gray-700 transition text-gray-400 hidden xs:block">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
+     </a>
+     <a href="/setting" aria-label="Account Settings" title="Settings" class="p-2 bg-gray-800 rounded hover:bg-gray-700 transition text-gray-400">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+       <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+      </svg>
+     </a>
+    </div>
+   </div>
+  </div>
+
+  <main class="flex-grow flex flex-col items-center">
+   <div class="w-full max-w-4xl space-y-1 bg-[#0a0a0a]">
+    {% for url in images %}
+    <img 
+    src="{{ url }}" 
+    loading="lazy" 
+    referrerpolicy="no-referrer" 
+    alt="Manga Page {{ loop.index }}" 
+    class="w-full h-auto block" 
+/>
+    {% endfor %}
+   </div>
+
+   <div class="py-20 flex flex-col items-center gap-6">
+    {% if next_id %}
+    <a href="/reader/{{ next_id }}" class="bg-orange-600 px-12 py-4 rounded-lg text-white font-extrabold uppercase tracking-widest hover:bg-orange-500 transition shadow-lg shadow-orange-900/20"> Next Chapter </a>
+    {% else %}
+    <a href="/manga/{{ manga_id }}" class="bg-zinc-800 px-12 py-4 rounded-lg text-white font-extrabold uppercase tracking-widest hover:bg-zinc-700 transition"> Finish Reading </a>
+    {% endif %}
+    <p class="text-xs text-zinc-600 font-bold uppercase tracking-tighter">You've reached the end of the chapter</p>
+   </div>
+   <button id="back-to-top" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" 
+    aria-label="Back to Top"
+    class="fixed bottom-12 right-0 p-4 bg-zinc-800 text-white transition-opacity duration-500 z-50 opacity-0 pointer-events-none hover:opacity-70">
+    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 512 512">
+        <path d="M233.4 105.4c12.5-12.5 32.8-12.5 45.3 0l192 192c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L256 173.3 86.6 342.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l192-192z"></path>
+    </svg>
+</button>
+  </main>
+
+<footer class="bg-[#121212] border-t border-gray-800 pt-12 pb-8">
+      <div class="max-w-7xl mx-auto px-8 text-center">
+        <div
+          class="flex justify-center gap-8 text-xs font-bold text-gray-500 uppercase mb-8"
+        >
+          <a href="/" class="hover:text-orange-500 transition">Home</a>
+          <a href="/random" class="hover:text-orange-500 transition">Random</a>
+          <a href="/privacy" class="hover:text-orange-500 transition"
+            >Privacy Policy</a
+          >
+          <a href="#" class="hover:text-orange-500 transition">Contact</a>
+        </div>
+        <p class="text-[10px] text-gray-600 uppercase tracking-widest">
+          Copyright © <span class="text-orange-500/80">MangaLocal</span>
+        </p>
+      </div>
+    </footer>
+  {% include 'auth_modal.html' %}
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+ </body>
+</html>

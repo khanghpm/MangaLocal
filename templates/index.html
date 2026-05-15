@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>MangaLocal - Home</title>
+  </head>
+
+  <body class="bg-black text-gray-200 min-h-screen flex flex-col">
+    {% include 'nav.html' %}
+    {% with messages = get_flashed_messages() %}{% if messages %}
+      <div id="flash-container" class="max-w-7xl mx-auto px-8 mt-4">
+        {% for message in messages %}
+          <div
+            class="flash-alert bg-orange-500/10 border border-orange-500/50 text-orange-500 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-opacity duration-1000"
+          >
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}{% endwith %}
+
+    <main class="p-8 max-w-7xl mx-auto flex-grow">
+      <h1 class="text-2xl font-bold mb-8 flex items-center gap-2 text-white">
+        <span class="w-2 h-8 bg-orange-500 rounded-full"></span>
+        Hot Updates
+      </h1>
+
+      <div
+        id="manga-grid"
+        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-8 mb-20"
+      >
+        {% if manga_list %}
+          {% include 'manga grid partial.html' %}
+        {% else %}
+          <div class="col-span-full py-32 text-center text-gray-600">
+            No updates found.
+          </div>
+        {% endif %}
+      </div>
+
+      {% if rec_list %}
+        <div class="border-t border-gray-800 pt-12 mb-12">
+          <h2 class="text-xl font-bold mb-8 flex items-center gap-2 text-white">
+            <span class="text-orange-500 text-2xl">★</span> Recommended For You
+          </h2>
+          <div
+            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8"
+          >
+            {% for manga in rec_list %}
+              {% include 'manga card.html' %}
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+      <button
+        id="back-to-top"
+        onclick="window.scrollTo({ top: 0, behavior: 'smooth' })"
+        aria-label="Back to Top"
+        class="fixed bottom-12 right-0 p-4 bg-zinc-800 text-white transition-opacity duration-500 z-50 opacity-0 pointer-events-none hover:opacity-70"
+      >
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 512 512">
+          <path
+            d="M233.4 105.4c12.5-12.5 32.8-12.5 45.3 0l192 192c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L256 173.3 86.6 342.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l192-192z"
+          ></path>
+        </svg>
+      </button>
+    </main>
+
+    <footer class="bg-[#121212] border-t border-gray-800 pt-12 pb-8">
+      <div class="max-w-7xl mx-auto px-8 text-center">
+        <div
+          class="flex justify-center gap-8 text-xs font-bold text-gray-500 uppercase mb-8"
+        >
+          <a href="/" class="hover:text-orange-500 transition">Home</a>
+          <a href="/random" class="hover:text-orange-500 transition">Random</a>
+          <a href="/privacy" class="hover:text-orange-500 transition"
+            >Privacy Policy</a
+          >
+          <a href="#" class="hover:text-orange-500 transition">Contact</a>
+        </div>
+        <p class="text-[10px] text-gray-600 uppercase tracking-widest">
+          Copyright © <span class="text-orange-500/80">MangaLocal</span>
+        </p>
+      </div>
+    </footer>
+
+    {% include 'auth_modal.html' %}
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>

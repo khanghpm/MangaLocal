@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="referrer" content="no-referrer" />
+    <title>Privacy Policy - MangaLocal</title>
+  </head>
+  <body class="bg-black text-gray-200 min-h-screen flex flex-col">
+    {% include 'nav.html' %}
+
+    <main class="flex-grow p-4 md:p-12">
+      <div
+        class="max-w-4xl mx-auto bg-[#111] p-8 md:p-12 rounded-2xl border border-gray-900 shadow-2xl"
+      >
+        <div
+          class="flex items-center gap-4 mb-10 border-b border-gray-800 pb-6"
+        >
+          <div class="bg-orange-500/10 p-3 rounded-lg">
+            <svg
+              class="w-8 h-8 text-orange-500"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+          <h1 class="text-3xl font-black text-white uppercase tracking-tight">
+            Privacy Policy
+          </h1>
+        </div>
+
+        <div class="space-y-10 text-sm leading-relaxed text-gray-400">
+          <section>
+            <h2
+              class="text-white text-lg font-bold mb-3 uppercase tracking-wider text-orange-500"
+            >
+              Introduction
+            </h2>
+            <p>
+              Welcome to MangaLocal! We are committed to protecting your privacy
+              and ensuring a safe online experience. This Privacy Policy
+              outlines how we collect, use, and protect your information when
+              you visit our website.
+            </p>
+          </section>
+
+          <section>
+            <h2 class="text-white text-lg font-bold mb-3">
+              Information We Collect
+            </h2>
+            <p>
+              When you visit our website, the only personal information we
+              collect is your email address. This may be collected when you
+              register on our site or fill out a form. We collect email
+              addresses solely for logging and authentication purposes.
+            </p>
+          </section>
+
+          <section>
+            <h2 class="text-white text-lg font-bold mb-3">
+              How We Use Your Information
+            </h2>
+            <p>
+              The email address you provide is used exclusively for logging
+              purposes. We do not use your email address to send out marketing
+              emails or for any other commercial purposes.
+            </p>
+          </section>
+
+          <section>
+            <h2 class="text-white text-lg font-bold mb-3">
+              How We Protect Your Information
+            </h2>
+            <p class="mb-4">
+              We implement a variety of security measures to maintain the safety
+              of your email address. These measures include:
+            </p>
+            <ul class="list-disc pl-5 space-y-2">
+              <li>
+                <strong class="text-white"
+                  >Secure Socket Layer (SSL) Technology:</strong
+                >
+                We use SSL technology to encrypt sensitive information.
+              </li>
+              <li>
+                <strong class="text-white">Regular Security Audits:</strong> We
+                conduct regular security audits to ensure the safety of our
+                data.
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 class="text-white text-lg font-bold mb-3">Cookies</h2>
+            <p>
+              Our website uses cookies to enhance your experience. Cookies are
+              small files that a site or its service provider transfers to your
+              computer's hard drive through your web browser that enable the
+              site's systems to recognize your browser and capture and remember
+              certain information.
+            </p>
+          </section>
+
+          <section>
+            <h2 class="text-white text-lg font-bold mb-3">
+              Third-Party Disclosure
+            </h2>
+            <p>
+              We do not sell, trade, or otherwise transfer to outside parties
+              your email address. This does not include trusted third parties
+              who assist us in operating our website, conducting our business,
+              or servicing you, so long as those parties agree to keep this
+              information confidential.
+            </p>
+          </section>
+
+          <section>
+            <h2 class="text-white text-lg font-bold mb-3">Contact Us</h2>
+            <p>
+              If you have any questions regarding this privacy policy, please
+              contact us at:
+            </p>
+            <a
+              href="mailto:support@mangalocal.com"
+              class="text-orange-500 hover:underline font-bold"
+              >support@mangalocal.com</a
+            >
+          </section>
+        </div>
+
+        <div class="mt-16 pt-8 border-t border-gray-900 text-center">
+          <p
+            class="text-[10px] text-gray-600 uppercase tracking-widest font-bold"
+          >
+            Last Modified: May 14, 2026
+          </p>
+        </div>
+      </div>
+    </main>
+
+    <footer class="bg-[#121212] border-t border-gray-800 pt-12 pb-8">
+      <div class="max-w-7xl mx-auto px-8 text-center">
+        <div
+          class="flex justify-center gap-8 text-xs font-bold text-gray-500 uppercase mb-8"
+        >
+          <a href="/" class="hover:text-orange-500 transition">Home</a>
+          <a href="/random" class="hover:text-orange-500 transition">Random</a>
+          <a href="/privacy" class="hover:text-orange-500 transition"
+            >Privacy Policy</a
+          >
+          <a href="#" class="hover:text-orange-500 transition">Contact</a>
+        </div>
+        <p class="text-[10px] text-gray-600 uppercase tracking-widest">
+          Copyright © <span class="text-orange-500/80">MangaLocal</span>
+        </p>
+      </div>
+    </footer>
+
+    {% include 'auth_modal.html' %}
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>

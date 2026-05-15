@@ -1,0 +1,17 @@
+# Python stuff
+__pycache__/
+*.pyc
+venv/
+env/
+
+# Database (Don't share your users' info!)
+instance/
+users.db
+
+# Node.js stuff
+node_modules/
+dist/
+
+# Editor/System junk
+.vscode/
+.DS_Store

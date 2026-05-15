@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="no-referrer" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Account Settings - MangaLocal</title>
+ </head>
+ <body class="bg-black text-gray-200 min-h-screen flex flex-col">
+  {% include 'nav.html' %}
+
+  <main class="max-w-5xl mx-auto w-full px-4 py-12 flex-grow">
+   <h1 class="text-3xl font-bold mb-10 flex items-center gap-4">Account Settings</h1>
+
+   {% with messages = get_flashed_messages() %} {% if messages %}
+   <div class="mb-6">
+    {% for message in messages %}
+    <div class="flash-alert bg-orange-500/10 border border-orange-500/50 text-orange-500 px-4 py-3 rounded-lg text-xs font-bold uppercase transition-opacity duration-1000">{{ message }}</div>
+    {% endfor %}
+   </div>
+   {% endif %} {% endwith %}
+
+   <div class="grid md:grid-cols-[240px_1fr] gap-12">
+    <aside class="space-y-2">
+     <button class="w-full text-left px-4 py-2.5 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs uppercase tracking-widest">General</button>
+     <button class="w-full text-left px-4 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 font-bold text-xs uppercase tracking-widest transition">Security</button>
+    </aside>
+
+    <div class="bg-[#121212] border border-gray-800 rounded-xl p-8 shadow-2xl">
+     <form action="/setting" method="POST" class="space-y-8">
+      <section>
+       <label for="set-email" class="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4 block">Email Address</label>
+       <input id="set-email" type="email" name="email" value="{{ current_user.email }}" class="w-full bg-black border border-gray-800 rounded-lg py-3 px-4 text-sm focus:border-orange-500 transition outline-none" />
+       <p class="text-[11px] text-gray-600 mt-2 italic">Your current login email.</p>
+      </section>
+
+      <hr class="border-gray-800" />
+
+      <section>
+       <label for="set-password" class="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4 block">Change Password</label>
+       <input id="set-password" type="password" name="password" placeholder="Enter new password" class="w-full bg-black border border-gray-800 rounded-lg py-3 px-4 text-sm focus:border-orange-500 transition outline-none" />
+       <p class="text-[11px] text-gray-600 mt-2 italic">Leave blank if you don't want to change it.</p>
+      </section>
+
+      <div class="pt-4 flex justify-end">
+       <button type="submit" class="bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 px-10 rounded-lg text-xs uppercase tracking-widest transition shadow-lg shadow-orange-900/20">Save Changes</button>
+      </div>
+     </form>
+    </div>
+   </div>
+  </main>
+
+  <footer class="bg-[#121212] border-t border-gray-800 pt-12 pb-8">
+   <div class="max-w-7xl mx-auto px-8 text-center">
+    <div class="flex justify-center gap-8 text-xs font-bold text-gray-500 uppercase mb-8">
+     <a href="/" class="hover:text-orange-500 transition">Home</a>
+     <a href="/random" class="hover:text-orange-500 transition">Random</a>
+     <a href="#" class="hover:text-orange-500 transition">Privacy Policy</a>
+     <a href="#" class="hover:text-orange-500 transition">Contact</a>
+    </div>
+    <p class="text-[10px] text-gray-600 uppercase tracking-widest">Copyright © <span class="text-orange-500/80">MangaLocal</span></p>
+   </div>
+  </footer>
+  {% include 'auth_modal.html' %}
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+ </body>
+</html>

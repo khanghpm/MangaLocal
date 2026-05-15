@@ -1,0 +1,46 @@
+<div id="auth-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+ <div class="bg-[#1a1a1a] w-full max-w-md rounded-lg shadow-2xl border border-gray-800 overflow-hidden">
+  <div class="flex bg-[#121212] border-b border-gray-800">
+   <button onclick="switchTab('login')" id="tab-login" class="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-white border-b-2 border-orange-500 transition">Login</button>
+   <button onclick="switchTab('register')" id="tab-register" class="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-white transition">Register</button>
+   <button onclick="switchTab('forgot')" id="tab-forgot" class="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-white transition">Forgot</button>
+  </div>
+  <div class="p-8">
+   <form id="form-login" action="/login" method="POST" class="space-y-5">
+    <div>
+     <label for="login-email" class="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Email Address</label>
+     <input id="login-email" type="email" name="email" placeholder="you@example.com" required class="w-full bg-black border border-gray-800 rounded-lg py-3 px-4 text-sm focus:border-orange-500 transition outline-none" />
+    </div>
+    <div>
+     <label for="login-pass" class="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Password</label>
+     <input id="login-pass" type="password" name="password" placeholder="••••••••" required class="w-full bg-black border border-gray-800 rounded-lg py-3 px-4 text-sm focus:border-orange-500 transition outline-none" />
+    </div>
+    <div class="flex gap-3 pt-2">
+     <button type="submit" class="flex-grow bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition">Login</button>
+     <button type="button" onclick="closeAuth()" class="bg-gray-800 hover:bg-gray-700 px-6 rounded-lg text-xs uppercase font-bold transition">Cancel</button>
+    </div>
+   </form>
+
+   <form id="form-register" action="/register" method="POST" class="hidden space-y-5">
+    <div>
+     <label for="reg-email" class="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Email Address</label>
+     <input id="reg-email" type="email" name="email" placeholder="new-user@example.com" required class="w-full bg-black border border-gray-800 rounded-lg py-3 px-4 text-sm focus:border-orange-500 transition outline-none" />
+    </div>
+    <div>
+     <label for="reg-pass" class="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">New Password</label>
+     <input id="reg-pass" type="password" name="password" placeholder="Min. 8 characters" required class="w-full bg-black border border-gray-800 rounded-lg py-3 px-4 text-sm focus:border-orange-500 transition outline-none" />
+    </div>
+    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition">Create Account</button>
+   </form>
+
+   <form id="form-forgot" action="/forgot_password" method="POST" class="hidden space-y-5">
+    <p class="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest text-center">Enter your email to receive a reset link</p>
+    <div>
+     <label for="forgot-email" class="text-[10px] font-bold text-gray-500 uppercase mb-2 block tracking-widest">Email Address</label>
+     <input id="forgot-email" type="email" name="email" placeholder="you@example.com" required class="w-full bg-black border border-gray-800 rounded-lg py-3 px-4 text-sm focus:border-orange-500 transition outline-none text-white" />
+    </div>
+    <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition">Reset Password</button>
+   </form>
+  </div>
+ </div>
+</div>
