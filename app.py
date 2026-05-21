@@ -189,8 +189,51 @@ def index():
             "type": "Manga" if attrs.get('originalLanguage') == 'ja' else "Manhwa/Manhua"
         })
 
-    return render_template('index.html', manga_list=manga_data, rec_list=rec_data)
+    return render_template('index.html', manga_list=manga_data, rec_list=rec_data, next_offset=20)
 
+@app.route('/api/load-more-hot')
+def load_more_hot():
+    offset = request.args.get('offset', default=20, type=int)
+    limit = 20
+    
+    # Call the MangaDex API with the dynamic offset
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "includes[]": ["cover_art"],
+        "contentRating[]": ["safe", "suggestive"]
+    }
+    
+    try:
+        resp = requests.get(f"{API_URL}/manga", params=params).json()
+        
+        manga_data = []
+        for m in resp.get('data', []):
+            attrs = m['attributes']
+            t_attr = attrs['title']
+            title = t_attr.get('en') or next(iter(t_attr.values()), "Untitled")
+            
+            cover_file = next((r['attributes']['fileName'] for r in m.get('relationships', []) 
+                             if r['type'] == 'cover_art' and 'attributes' in r), None)
+            cover = f"https://uploads.mangadex.org/covers/{m['id']}/{cover_file}.256.jpg" if cover_file else ""
+
+            manga_data.append({
+                "id": m['id'], 
+                "title": title, 
+                "cover": cover,
+                "status": attrs.get('status', '').capitalize(),
+                "type": "Manga" if attrs.get('originalLanguage') == 'ja' else "Manhwa/Manhua"
+            })
+            
+        if not manga_data:
+            return ""
+            
+        # Match your exact template file name and your 'manga_list' variable name
+        return render_template('Manga grid partial.html', manga_list=manga_data)
+        
+    except Exception as e:
+        print(f"Database/API Error: {e}")
+        return "", 500
 @app.route('/manga/<id>')
 def manga_details(id):
     # 1. Get the target language from the URL query parameters (default to 'en')

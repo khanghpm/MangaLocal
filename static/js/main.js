@@ -202,3 +202,39 @@ async function loadMore() {
   btn.disabled = false
  }
 }
+
+function loadMoreHotUpdates() {
+ const button = document.getElementById("load-more-hot-btn")
+ const gridContainer = document.getElementById("manga-grid") // Match your HTML ID exactly!
+
+ if (!button || !gridContainer) return
+
+ const currentOffset = parseInt(button.getAttribute("data-next"))
+
+ button.textContent = "Loading Updates..."
+ button.disabled = true
+
+ fetch(`/api/load-more-hot?offset=${currentOffset}`)
+  .then((response) => response.text())
+  .then((htmlContent) => {
+   if (htmlContent.trim() === "") {
+    button.textContent = "No More Results Available"
+    button.style.display = "none"
+    return
+   }
+
+   // Append new raw HTML elements directly inside the grid wrapper
+   gridContainer.insertAdjacentHTML("beforeend", htmlContent)
+
+   const nextOffset = currentOffset + 20
+   button.setAttribute("data-next", nextOffset)
+
+   button.textContent = "View More Results..."
+   button.disabled = false
+  })
+  .catch((error) => {
+   console.error("Error fetching more hot updates:", error)
+   button.textContent = "Error Loading. Try Again."
+   button.disabled = false
+  })
+}
