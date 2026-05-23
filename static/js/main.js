@@ -37,21 +37,6 @@ function toggleAccountDropdown(event) {
 }
 
 // 3. AUTH MODAL LOGIC
-function openAuth() {
- const modal = document.getElementById("auth-modal")
- if (modal) {
-  modal.classList.remove("hidden")
-  document.body.style.overflow = "hidden"
- }
-}
-
-function closeAuth() {
- const modal = document.getElementById("auth-modal")
- if (modal) {
-  modal.classList.add("hidden")
-  document.body.style.overflow = "auto"
- }
-}
 
 function switchTab(tab) {
  const forms = ["login", "register", "forgot"]
@@ -237,4 +222,133 @@ function loadMoreHotUpdates() {
    button.textContent = "Error Loading. Try Again."
    button.disabled = false
   })
+}
+
+function toggleBookmark(mangaId, mangaTitle, coverUrl) {
+ const btn = document.getElementById(`bookmark-btn-${mangaId}`)
+ const icon = document.getElementById(`bookmark-icon-${mangaId}`)
+
+ // Prevent spam clicking
+ if (btn.disabled) return
+ btn.disabled = true
+
+ fetch("/api/bookmark", {
+  method: "POST",
+  headers: {
+   "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+   manga_id: mangaId,
+   manga_title: mangaTitle,
+   cover_url: coverUrl,
+  }),
+ })
+  .then((response) => {
+   if (response.status === 401) {
+    btn.disabled = false // Unlock the button
+
+    const authModal = document.getElementById("auth-modal")
+    if (authModal) {
+     openAuth() // Just call your new function here!
+    } else {
+     alert("Please log in to bookmark manga.")
+     window.location.href = "/login"
+    }
+    throw new Error("Unauthorized")
+   }
+   return response.json()
+  })
+  .then((data) => {
+   if (data.status === "added") {
+    icon.setAttribute("fill", "currentColor")
+    btn.classList.add("text-orange-500")
+    btn.classList.remove("text-gray-400", "hover:text-white")
+   } else if (data.status === "removed") {
+    icon.setAttribute("fill", "none")
+    btn.classList.remove("text-orange-500")
+    btn.classList.add("text-gray-400", "hover:text-white")
+   }
+   // Unlock button after a successful database save
+   btn.disabled = false
+  })
+  .catch((error) => {
+   console.error("Error toggling bookmark:", error)
+   // Unlock button if something else goes wrong
+   btn.disabled = false
+  })
+}
+
+function openAuth() {
+ const authModal = document.getElementById("auth-modal")
+ if (authModal) {
+  authModal.classList.remove("hidden")
+  authModal.classList.add("flex") // Centers the modal
+  document.body.style.overflow = "hidden" // Locks background scroll
+ }
+}
+
+function closeAuth() {
+ const authModal = document.getElementById("auth-modal")
+ const modalContent = document.getElementById("auth-modal-content")
+
+ if (authModal && modalContent) {
+  // 1. Play "Out" animations
+  authModal.classList.remove("animate-backdrop")
+  authModal.classList.add("animate-backdrop-out")
+  modalContent.classList.remove("animate-modal-pop")
+  modalContent.classList.add("animate-modal-pop-out")
+
+  // 2. Wait for animation, then hide and unlock scroll
+  setTimeout(() => {
+   authModal.classList.add("hidden")
+   authModal.classList.remove("flex")
+
+   document.body.style.overflow = "" // Unlocks background scroll!
+
+   // 3. Reset classes for next time
+   authModal.classList.remove("animate-backdrop-out")
+   authModal.classList.add("animate-backdrop")
+   modalContent.classList.remove("animate-modal-pop-out")
+   modalContent.classList.add("animate-modal-pop")
+  }, 200)
+ }
+}
+
+async function removeBookmarkCard(mangaId) {
+ // We call the same API route your "Add Bookmark" button uses
+ const response = await fetch("/api/bookmark", {
+  method: "POST",
+  headers: {
+   "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ manga_id: mangaId }),
+ })
+
+ if (response.ok) {
+  // Since the bookmark is deleted, we just reload the page
+  // to show the updated list without that item
+  location.reload()
+ } else {
+  alert("Failed to remove bookmark. Please try again.")
+ }
+}
+
+function switchSettingsTab(tab) {
+ // 1. Hide all sections
+ document.getElementById("section-general").classList.add("hidden")
+ document.getElementById("section-security").classList.add("hidden")
+
+ // 2. Remove active style from all buttons
+ const buttons = ["btn-general", "btn-security"]
+ buttons.forEach((id) => {
+  const btn = document.getElementById(id)
+  btn.classList.remove("bg-orange-500/10", "text-orange-500")
+  btn.classList.add("text-gray-500", "hover:text-white", "hover:bg-white/5")
+ })
+
+ // 3. Show selected section and activate button
+ document.getElementById("section-" + tab).classList.remove("hidden")
+ const activeBtn = document.getElementById("btn-" + tab)
+ activeBtn.classList.add("bg-orange-500/10", "text-orange-500")
+ activeBtn.classList.remove("text-gray-500", "hover:text-white", "hover:bg-white/5")
 }

@@ -1,5 +1,6 @@
 import requests
 from itsdangerous import URLSafeTimedSerializer
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -42,10 +43,31 @@ TAGS_MAP = {
 }
 
 # --- USER MODEL ---
+# --- USER MODEL ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
+    # NEW FIELDS:
+    username = db.Column(db.String(50), nullable=True)
+    profile_pic = db.Column(db.String(500), nullable=True, default='https://ui-avatars.com/api/?name=User&background=ea580c&color=fff')
+
+class Bookmark(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    manga_id = db.Column(db.String(100), nullable=False)
+    manga_title = db.Column(db.String(255), nullable=False)
+    cover_url = db.Column(db.String(500), nullable=False) 
+
+class History(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    manga_id = db.Column(db.String(100), nullable=False)
+    manga_title = db.Column(db.String(255), nullable=False)
+    cover_url = db.Column(db.String(500), nullable=False)
+    chapter_id = db.Column(db.String(100), nullable=False)
+    chapter_num = db.Column(db.String(50), nullable=True)
+    last_read = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -131,6 +153,52 @@ def reset_with_token(token):
 
 # --- MANGADEX ROUTES ---
 
+@app.route('/bookmarks')
+@login_required
+def bookmarks():
+    # Notice how these next two lines are pushed in!
+    user_bookmarks = Bookmark.query.filter_by(user_id=current_user.id).all()
+    return render_template('bookmarks.html', bookmarks=user_bookmarks)
+
+@app.route('/api/bookmark', methods=['POST'])
+# Notice we removed @login_required here!
+def toggle_bookmark():
+    # 1. Manually check if the user is logged in first
+    if not current_user.is_authenticated:
+        return jsonify({"error": "unauthorized"}), 401
+
+    data = request.json
+    manga_id = data.get('manga_id')
+    manga_title = data.get('manga_title')
+    cover_url = data.get('cover_url', '')
+
+    if not manga_id:
+        return jsonify({"error": "Missing manga ID"}), 400
+
+    existing_bookmark = Bookmark.query.filter_by(user_id=current_user.id, manga_id=manga_id).first()
+
+    if existing_bookmark:
+        db.session.delete(existing_bookmark)
+        db.session.commit()
+        return jsonify({"status": "removed"})
+    else:
+        new_bookmark = Bookmark(
+            user_id=current_user.id, 
+            manga_id=manga_id, 
+            manga_title=manga_title, 
+            cover_url=cover_url
+        )
+        db.session.add(new_bookmark)
+        db.session.commit()
+        return jsonify({"status": "added"})
+    
+@app.route('/history')
+@login_required
+def history():
+    # Fetch history and order it so the most recently read is at the top
+    user_history = History.query.filter_by(user_id=current_user.id).order_by(History.last_read.desc()).all()
+    return render_template('history.html', history=user_history)
+    
 @app.route('/')
 def index():
     # 1. Fetch "Hot Updates" (Aligned to your new 36-card grid)
@@ -234,119 +302,145 @@ def load_more_hot():
     except Exception as e:
         print(f"Database/API Error: {e}")
         return "", 500
+    
+
 @app.route('/manga/<id>')
 def manga_details(id):
     # 1. Get the target language from the URL query parameters (default to 'en')
     target_lang = request.args.get('lang', 'en')
 
-    # Fetch Manga Data
-    m_resp = requests.get(f"{API_URL}/manga/{id}", params={"includes[]": ["cover_art", "author"]}).json()
-    m_data = m_resp.get('data', {})
-    attr = m_data.get('attributes', {})
-    links = attr.get('links', {})
-    
-    # 2. Extract available languages for the switcher menu
-    available_langs = attr.get('availableTranslatedLanguages', [])
-    # Sort them alphabetically for the dropdown
-    available_langs.sort()
-    
-    # Safely get title and description
-    title = attr.get('title', {}).get('en') or next(iter(attr.get('title', {}).values()), "Untitled")
-    description = attr.get('description', {}).get('en', "No description available.")
-    status = attr.get('status', 'Ongoing').capitalize()
-    year = attr.get('year', 'Unknown')
-    m_type = m_data.get('type', 'manga').capitalize()
-    
-    official_eng = "Yes" if links.get('eng') else "No"
-    adult_content = "Yes" if attr.get('contentRating') in ['erotica', 'pornographic'] else "No"
-    
-    mal_id = links.get('mal')
-    al_id = links.get('al')
+    try:
+        # Fetch Manga Data SAFELY
+        m_req = requests.get(f"{API_URL}/manga/{id}", params={"includes[]": ["cover_art", "author"]})
+        if not m_req.ok:
+            print(f"API Error fetching Manga {id}: {m_req.status_code}")
+            return redirect('/')
+            
+        m_resp = m_req.json()
+        m_data = m_resp.get('data', {})
+        attr = m_data.get('attributes', {})
+        links = attr.get('links', {})
+        
+        # 2. Extract available languages for the switcher menu
+        available_langs = attr.get('availableTranslatedLanguages', [])
+        if available_langs:
+            available_langs.sort()
+        
+        # Safely get title and description
+        title = attr.get('title', {}).get('en') or next(iter(attr.get('title', {}).values()), "Untitled")
+        description = attr.get('description', {}).get('en', "No description available.")
+        status = attr.get('status', 'Ongoing').capitalize()
+        year = attr.get('year', 'Unknown')
+        m_type = m_data.get('type', 'manga').capitalize()
+        
+        official_eng = "Yes" if links.get('eng') else "No"
+        adult_content = "Yes" if attr.get('contentRating') in ['erotica', 'pornographic'] else "No"
+        
+        mal_id = links.get('mal')
+        al_id = links.get('al')
 
-    tags = [t['attributes']['name']['en'] for t in attr.get('tags', [])]
-    tag_ids = [t['id'] for t in attr.get('tags', [])]
+        tags = [t['attributes']['name']['en'] for t in attr.get('tags', [])]
+        tag_ids = [t['id'] for t in attr.get('tags', [])]
 
-    # Handle Relationships (Cover and Author)
-    cover_file = ""
-    author_name = "Unknown"
-    for rel in m_data.get('relationships', []):
-        if rel['type'] == 'cover_art' and 'attributes' in rel:
-            cover_file = rel['attributes'].get('fileName', "")
-        if rel['type'] == 'author' and 'attributes' in rel:
-            author_name = rel['attributes'].get('name', "Unknown")
-    
-    # Using the 512px version for a balance of quality and speed on the info page
-    cover_url = f"https://uploads.mangadex.org/covers/{id}/{cover_file}.512.jpg" if cover_file else ""
+        # Handle Relationships (Cover and Author)
+        cover_file = ""
+        author_name = "Unknown"
+        for rel in m_data.get('relationships', []):
+            if rel['type'] == 'cover_art' and 'attributes' in rel:
+                cover_file = rel['attributes'].get('fileName', "")
+            if rel['type'] == 'author' and 'attributes' in rel:
+                author_name = rel['attributes'].get('name', "Unknown")
+        
+        # Using the 512px version for a balance of quality and speed on the info page
+        cover_url = f"https://uploads.mangadex.org/covers/{id}/{cover_file}.512.jpg" if cover_file else ""
 
-    # 3. Fetch Chapters using the DYNAMIC target_lang
-    c_params = {
-        "limit": 500, 
-        "translatedLanguage[]": [target_lang], 
-        "order[chapter]": "desc",
-        #"includeExternalUrl": "1",
-        "contentRating[]": ["safe", "suggestive", "erotica", "pornographic"] # <--- ADD THIS LINE
-    }
-    c_resp = requests.get(f"{API_URL}/manga/{id}/feed", params=c_params).json()
-
-   # --- THE DEBUG TRIPLE-CHECK ---
-    req = requests.Request('GET', f"{API_URL}/manga/{id}/feed", params=c_params).prepare()
-    print(f"--- DEBUG: FULL API URL: {req.url} ---")
-    
-    c_resp = requests.get(f"{API_URL}/manga/{id}/feed", params=c_params).json()
-    raw_chapters = c_resp.get('data', [])
-    print(f"--- DEBUG: API found {len(raw_chapters)} chapters for lang: {target_lang} ---")
-    
-    raw_chapters = c_resp.get('data', [])
-    unique_chapters = []
-    seen_numbers = set()
-
-    for chap in raw_chapters:
-        num = chap['attributes'].get('chapter')
-        if num not in seen_numbers:
-            # Add a helper for the template to show "Oneshot" if the number is null
+        # 3. Fetch Chapters using the DYNAMIC target_lang (BULLETPROOF)
+        c_params = {
+            "limit": 500, 
+            "translatedLanguage[]": [target_lang, "no"], 
+            "order[chapter]": "desc",
+            "contentRating[]": ["safe", "suggestive", "erotica", "pornographic"]
+        }
+        
+        c_request = requests.get(f"{API_URL}/manga/{id}/feed", params=c_params)
+        raw_chapters = []
+        
+        if c_request.ok:
+            c_resp = c_request.json()
+            raw_chapters = c_resp.get('data', [])
+        
+        unique_chapters = []
+        for chap in raw_chapters:
+            num = chap['attributes'].get('chapter')
             chap['display_num'] = num if num else "Oneshot"
             unique_chapters.append(chap)
-            seen_numbers.add(num)
 
-    # Recommendations Logic
-    rec_params = {"limit": 7, "includes[]": ["cover_art"], "contentRating[]": ["safe", "suggestive"]}
-    if tag_ids:
-        rec_params["includedTags[]"] = tag_ids[:3]
-    
-    rec_resp = requests.get(f"{API_URL}/manga", params=rec_params).json()
-    recs_data = rec_resp.get('data', [])
-
-    if not recs_data:
-        if "includedTags[]" in rec_params: del rec_params["includedTags[]"]
-        rec_resp = requests.get(f"{API_URL}/manga", params=rec_params).json()
-        recs_data = rec_resp.get('data', [])
-
-    recommendations = []
-    for r in recs_data:
-        if r['id'] == id: continue
-        if len(recommendations) >= 6: break
+        # 4. Recommendations Logic (BULLETPROOF)
+        rec_params = {"limit": 7, "includes[]": ["cover_art"], "contentRating[]": ["safe", "suggestive"]}
+        if tag_ids:
+            rec_params["includedTags[]"] = tag_ids[:3]
         
-        r_title = r['attributes']['title'].get('en') or next(iter(r['attributes']['title'].values()), "Untitled")
-        r_cover_file = next((rel['attributes'].get('fileName') for rel in r.get('relationships', []) 
-                           if rel['type'] == 'cover_art' and 'attributes' in rel), "")
-        r_cover = f"https://uploads.mangadex.org/covers/{r['id']}/{r_cover_file}.256.jpg" if r_cover_file else ""
+        recs_data = []
+        rec_req = requests.get(f"{API_URL}/manga", params=rec_params)
         
-        recommendations.append({"id": r['id'], "title": r_title, "cover": r_cover})
+        if rec_req.ok:
+            recs_data = rec_req.json().get('data', [])
 
-    manga_info = {
-        "id": id, "title": title, "desc": description, "cover": cover_url,
-        "status": status, "author": author_name, "tags": tags,
-        "year": year, "type": m_type, "official": official_eng,
-        "adult": adult_content, "mal": mal_id, "al": al_id
-    }
-    
-    return render_template('manga.html', 
-        manga=manga_info, 
-        chapters=unique_chapters, 
-        available_langs=available_langs, # New variable for HTML
-        current_lang=target_lang,        # New variable for HTML
-        recs=recommendations
-    )
+        # Fallback if no recommendations found with tags
+        if not recs_data:
+            if "includedTags[]" in rec_params: 
+                del rec_params["includedTags[]"]
+            rec_req2 = requests.get(f"{API_URL}/manga", params=rec_params)
+            if rec_req2.ok:
+                recs_data = rec_req2.json().get('data', [])
+
+        recommendations = []
+        for r in recs_data:
+            if r['id'] == id: continue
+            if len(recommendations) >= 6: break
+            
+            r_title = r['attributes']['title'].get('en') or next(iter(r['attributes']['title'].values()), "Untitled")
+            r_cover_file = next((rel['attributes'].get('fileName') for rel in r.get('relationships', []) 
+                               if rel['type'] == 'cover_art' and 'attributes' in rel), "")
+            r_cover = f"https://uploads.mangadex.org/covers/{r['id']}/{r_cover_file}.256.jpg" if r_cover_file else ""
+            
+            # These fields are required for the new recommendation UI badges
+            r_status = r['attributes'].get('status', '').capitalize()
+            r_type = "Manga" if r['attributes'].get('originalLanguage') == 'ja' else "Manhwa/Manhua"
+            
+            recommendations.append({
+                "id": r['id'], 
+                "title": r_title, 
+                "cover": r_cover, 
+                "status": r_status, 
+                "type": r_type
+            })
+
+        manga_info = {
+            "id": id, "title": title, "desc": description, "cover": cover_url,
+            "status": status, "author": author_name, "tags": tags,
+            "year": year, "type": m_type, "official": official_eng,
+            "adult": adult_content, "mal": mal_id, "al": al_id
+        }
+        
+        is_bookmarked = False
+        if current_user.is_authenticated:
+            existing = Bookmark.query.filter_by(user_id=current_user.id, manga_id=id).first()
+            if existing:
+                is_bookmarked = True
+        
+        return render_template('manga.html', 
+            manga=manga_info, 
+            chapters=unique_chapters, 
+            available_langs=available_langs,
+            current_lang=target_lang,
+            recs=recommendations,
+            is_bookmarked=is_bookmarked
+        )
+
+    except Exception as e:
+        print(f"CRITICAL ERROR IN MANGA DETAILS: {e}")
+        return redirect('/')
 
 @app.route('/search')
 def search():
@@ -354,7 +448,12 @@ def search():
     query = request.args.get('q', '').strip()
     statuses = request.args.getlist('status')
     types = request.args.getlist('type')
-    tags = request.args.getlist('tags')
+    
+    # --- FIX: Convert tag names to UUIDs ---
+    tag_names = request.args.getlist('tags')
+    tag_ids = [TAGS_MAP[t] for t in tag_names if t in TAGS_MAP]
+    # ---------------------------------------
+    
     demographics = request.args.getlist('demographic')
     ratings = request.args.getlist('rating') or ["safe", "suggestive"]
     sort_by = request.args.get('sort', 'relevance')
@@ -364,7 +463,8 @@ def search():
     offset = int(request.args.get('offset', 0))
     limit = 36 # Your updated limit
 
-    is_discovery = not any([query, statuses, types, tags, demographics])
+    # Update discovery check to use our new tag_ids variable
+    is_discovery = not any([query, statuses, types, tag_ids, demographics])
 
     # 2. Build params as a Dictionary
     params = {
@@ -387,11 +487,14 @@ def search():
         if query: params['title'] = query
         if statuses: params['status[]'] = statuses
         if types: params['originalLanguage[]'] = types
-        if tags: params['includedTags[]'] = tags
+        # --- FIX: Use mapped IDs here ---
+        if tag_ids: params['includedTags[]'] = tag_ids
+        # --------------------------------
         if demographics: params['publicationDemographic[]'] = demographics
 
     manga_data = []
     try:
+        # Debugging: this will print the clean URL with UUIDs so you can verify it works
         debug_url = requests.Request('GET', f"{API_URL}/manga", params=params).prepare().url
         print(f"--- ACTIVE SEARCH SIGNAL ---\nURL: {debug_url}\n------------------------")
         
@@ -427,7 +530,7 @@ def search():
                            is_discovery=is_discovery,
                            selected_statuses=statuses,
                            selected_types=types,
-                           selected_tags=tags,
+                           selected_tags=tag_names, # Keep names for the checkboxes
                            selected_demographics=demographics,
                            selected_ratings=ratings,
                            current_sort=sort_by,
@@ -435,26 +538,53 @@ def search():
                            query=query,
                            next_offset=offset + limit)
 
+
 @app.route('/setting', methods=['GET', 'POST'])
 @login_required 
 def setting():
     if request.method == 'POST':
-        new_email = request.form.get('email')
-        new_password = request.form.get('password')
-        
-        # Email Update
-        if new_email and new_email != current_user.email:
-            current_user.email = new_email
+        action = request.form.get('action')
+
+        # --- GENERAL TAB SUBMISSION ---
+        if action == 'update_general':
+            new_email = request.form.get('email')
+            new_username = request.form.get('username')
+            new_pic = request.form.get('profile_pic')
             
-        # Password Update
-        if new_password:
-            current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+            # Check if email is being changed to one that already exists
+            if new_email and new_email != current_user.email:
+                existing = User.query.filter_by(email=new_email).first()
+                if existing:
+                    flash("That email is already in use.", "error")
+                    return redirect(url_for('setting'))
+                current_user.email = new_email
+                
+            if new_username:
+                current_user.username = new_username
+            if new_pic:
+                current_user.profile_pic = new_pic
+                
+            db.session.commit()
+            flash("General settings updated successfully!", "success")
+
+        # --- SECURITY TAB SUBMISSION ---
+        elif action == 'update_security':
+            old_password = request.form.get('old_password')
+            new_password = request.form.get('new_password')
             
-        db.session.commit()
-        flash("Settings updated successfully!", "success")
+            # Verify the old password first
+            if not check_password_hash(current_user.password, old_password):
+                flash("Incorrect old password. Changes denied.", "error")
+            elif new_password:
+                # If verified, hash and save the new password
+                current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+                db.session.commit()
+                flash("Password updated successfully!", "success")
+            else:
+                flash("Please enter a new password.", "error")
+
         return redirect(url_for('setting'))
         
-    # --- CRITICAL MISSING LINE FROM YOUR SCREENSHOT ---
     return render_template('setting.html')
 
 @app.route('/random')
@@ -526,15 +656,19 @@ def reader(chapter_id):
         # Define current_display for your reader.html title tag
         current_display = attrs.get('title') or f"Episode {current_num}"
 
-        # 2. Get Manga Title
-        m_resp = requests.get(f"{API_URL}/manga/{manga_id}").json()
+        # 2. Get Manga Title AND Cover Art
+        m_resp = requests.get(f"{API_URL}/manga/{manga_id}", params={"includes[]": ["cover_art"]}).json()
         m_title = m_resp['data']['attributes']['title'].get('en') or next(iter(m_resp['data']['attributes']['title'].values()), "Untitled")
+
+        # Extract the cover file
+        cover_file = next((r['attributes']['fileName'] for r in m_resp['data'].get('relationships', []) if r['type'] == 'cover_art' and 'attributes' in r), None)
+        manga_cover = f"https://uploads.mangadex.org/covers/{manga_id}/{cover_file}.256.jpg" if cover_file else ""
 
         # 3. Fetch all chapters for the nav bar (Language Synchronized)
         # Using the detected 'chapter_lang' instead of hardcoded 'en'
         feed_params = {
             "limit": 500, 
-            "translatedLanguage[]": [chapter_lang], 
+            "translatedLanguage[]": [chapter_lang, "no"], 
             "order[chapter]": "desc" 
         }
         f_resp = requests.get(f"{API_URL}/manga/{manga_id}/feed", params=feed_params).json()
@@ -579,7 +713,35 @@ def reader(chapter_id):
 
         # Construct Final URLs using the STABLE host
         image_urls = [f"{base_url}/{path_type}/{chapter_hash}/{f}" for f in filenames]
-        
+    
+    # --- NEW: Check if it's already bookmarked ---
+        is_bookmarked = False
+        if current_user.is_authenticated:
+            existing = Bookmark.query.filter_by(user_id=current_user.id, manga_id=manga_id).first()
+            if existing:
+                is_bookmarked = True
+
+                # --- NEW: UPDATE READING HISTORY ---
+            history_record = History.query.filter_by(user_id=current_user.id, manga_id=manga_id).first()
+            if history_record:
+                # If they already read this manga, just update to the latest chapter
+                history_record.chapter_id = chapter_id
+                history_record.chapter_num = current_num
+            else:
+                # If this is their first time reading this manga, create a new record
+                new_history = History(
+                    user_id=current_user.id,
+                    manga_id=manga_id,
+                    manga_title=m_title,
+                    cover_url=manga_cover,
+                    chapter_id=chapter_id,
+                    chapter_num=current_num
+                )
+                db.session.add(new_history)
+            
+            db.session.commit()
+            # -----------------------------------
+
     except Exception as e:
         print(f"CRITICAL ERROR IN READER: {e}")
         return redirect('/')
@@ -588,11 +750,13 @@ def reader(chapter_id):
         images=image_urls, 
         manga_title=m_title,
         manga_id=manga_id,
+        manga_cover=manga_cover,
         current_num=current_num,
         current_display=current_display,
         all_chapters=unique_chaps,
         prev_id=prev_id,
-        next_id=next_id
+        next_id=next_id,
+        is_bookmarked=is_bookmarked
     )
 
 @app.route('/privacy')

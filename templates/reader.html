@@ -57,6 +57,19 @@
      <a href="/toggle_bookmark/{{ manga_id }}" aria-label="Bookmark Manga" title="Bookmark" class="p-2 bg-gray-800 rounded hover:bg-gray-700 transition text-gray-400 hidden xs:block">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
      </a>
+     
+     <button 
+         id="bookmark-btn-{{ manga_id if manga_id else manga.id }}" 
+         onclick="toggleBookmark('{{ manga_id if manga_id else manga.id }}', '{{ (manga_title if manga_title else manga.title)|escape }}', '{{ manga_cover if manga_cover else manga.cover }}')"
+         aria-label="Bookmark Manga" 
+         title="Bookmark" 
+         class="p-2 bg-gray-800 rounded transition flex items-center justify-center {% if is_bookmarked %}text-orange-500{% else %}text-gray-400 hover:bg-gray-700 hover:text-white{% endif %}"
+     >
+         <svg id="bookmark-icon-{{ manga_id if manga_id else manga.id }}" class="w-4 h-4" fill="{% if is_bookmarked %}currentColor{% else %}none{% endif %}" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+         </svg>
+     </button>
+
      <a href="/setting" aria-label="Account Settings" title="Settings" class="p-2 bg-gray-800 rounded hover:bg-gray-700 transition text-gray-400">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
        <path

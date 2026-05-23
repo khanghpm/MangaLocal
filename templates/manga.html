@@ -197,40 +197,33 @@
         </div>
       </div>
 
-      <div class="mt-20 border-t border-gray-800 pt-12">
-        <h2 class="text-xl font-bold mb-8 flex items-center gap-2 text-white">
-          <span class="text-orange-500 text-2xl">★</span> Recommendations
-        </h2>
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6">
-          {% for r in recs %}
-            <a href="/manga/{{ r.id }}" class="group">
-              <div
-                class="aspect-[3/4] overflow-hidden rounded border border-gray-800 group-hover:border-orange-500 transition mb-2 shadow-lg"
-              >
-                <img
-                  src="{{ r.cover }}"
-                  alt="{{ r.title }} cover"
-                  class="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                />
-              </div>
-              <p
-                class="text-[11px] font-bold truncate group-hover:text-orange-400 transition"
-              >
-                {{ r.title }}
-              </p>
-            </a>
-          {% endfor %}
+      {% if recs %}
+        <div class="border-t border-gray-800 pt-12 mb-12">
+          <h2 class="text-xl font-bold mb-8 flex items-center gap-2 text-white">
+            <span class="text-orange-500 text-2xl">★</span> Recommended For You
+          </h2>
+          <div
+            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8"
+          >
+            {% for manga in recs %}
+              {% include 'manga card.html' %}
+            {% endfor %}
+          </div>
         </div>
-      </div>
+      {% endif %}
 
-      <button id="back-to-top" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" 
-    aria-label="Back to Top"
-    class="fixed bottom-12 right-0 p-4 bg-zinc-800 text-white transition-opacity duration-500 z-50 opacity-0 pointer-events-none hover:opacity-70">
-    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 512 512">
-        <path d="M233.4 105.4c12.5-12.5 32.8-12.5 45.3 0l192 192c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L256 173.3 86.6 342.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l192-192z"></path>
-    </svg>
-</button>
-
+      <button
+        id="back-to-top"
+        onclick="window.scrollTo({ top: 0, behavior: 'smooth' })"
+        aria-label="Back to Top"
+        class="fixed bottom-12 right-0 p-4 bg-zinc-800 text-white transition-opacity duration-500 z-50 opacity-0 pointer-events-none hover:opacity-70"
+      >
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 512 512">
+          <path
+            d="M233.4 105.4c12.5-12.5 32.8-12.5 45.3 0l192 192c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L256 173.3 86.6 342.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l192-192z"
+          ></path>
+        </svg>
+      </button>
     </main>
 
     <footer class="bg-[#121212] border-t border-gray-800 pt-12 pb-8">
