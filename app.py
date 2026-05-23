@@ -766,5 +766,5 @@ def privacy():
 # --- STARTUP ---
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all() # Automatically creates the database file
-    app.run(debug=True, port=5000)
+        db.create_all()  # This guarantees all tables are built if the .db file is new/wiped
+    app.run(debug=True)
