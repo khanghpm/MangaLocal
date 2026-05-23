@@ -297,7 +297,7 @@ def load_more_hot():
             return ""
             
         # Match your exact template file name and your 'manga_list' variable name
-        return render_template('Manga grid partial.html', manga_list=manga_data)
+        return render_template('manga grid partial.html', manga_list=manga_data)
         
     except Exception as e:
         print(f"Database/API Error: {e}")
