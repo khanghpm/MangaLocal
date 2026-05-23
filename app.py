@@ -764,7 +764,10 @@ def privacy():
     return render_template('privacy.html')
 
 # --- STARTUP ---
+# 1. Place this AFTER all your models and routes are defined!
+with app.app_context():
+    db.create_all()
+
+# 2. This remains at the very end
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()  # This guarantees all tables are built if the .db file is new/wiped
     app.run(debug=True)
