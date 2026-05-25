@@ -352,3 +352,48 @@ function switchSettingsTab(tab) {
  activeBtn.classList.add("bg-orange-500/10", "text-orange-500")
  activeBtn.classList.remove("text-gray-500", "hover:text-white", "hover:bg-white/5")
 }
+
+// ==========================================
+// ADVANCED SEARCH: 3-STATE TAG LOGIC
+// ==========================================
+
+// 1. Handle clicking the tags (Attached to the window so the HTML onclick can see it)
+window.toggleTag = function (element) {
+ let currentState = parseInt(element.getAttribute("data-state"))
+
+ // Cycle: 0 (Neutral) -> 1 (Include) -> 2 (Exclude) -> 0
+ let newState = (currentState + 1) % 3
+
+ element.setAttribute("data-state", newState)
+ element.className = `tag-btn tag-state-${newState} border rounded-md px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest`
+}
+
+// 2. Intercept the form submission to attach the UUIDs
+document.addEventListener("DOMContentLoaded", function () {
+ const searchForm = document.getElementById("advanced-search-form")
+
+ // Safety check: Only run this if we are actually on the Search page
+ if (searchForm) {
+  searchForm.addEventListener("submit", function (e) {
+   // Remove any old hidden inputs so we don't duplicate them on multiple clicks
+   document.querySelectorAll(".dynamic-tag").forEach((el) => el.remove())
+
+   // Loop through every tag button on the screen
+   document.querySelectorAll(".tag-btn").forEach((btn) => {
+    let state = parseInt(btn.getAttribute("data-state"))
+    let tagId = btn.getAttribute("data-id")
+
+    if (state !== 0) {
+     let input = document.createElement("input")
+     input.type = "hidden"
+     input.className = "dynamic-tag"
+     // If state is 1, send to includedTags[]. If 2, send to excludedTags[]
+     input.name = state === 1 ? "includedTags[]" : "excludedTags[]"
+     input.value = tagId
+     searchForm.appendChild(input)
+    }
+   })
+   // Let the form submit naturally after injecting the hidden inputs
+  })
+ }
+})

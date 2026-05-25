@@ -444,35 +444,55 @@ def manga_details(id):
 
 @app.route('/search')
 def search():
-    # 1. Capture user inputs
+    # 1. Capture user inputs (Keeping all your existing filters!)
     query = request.args.get('q', '').strip()
     statuses = request.args.getlist('status')
     types = request.args.getlist('type')
-    
-    # --- FIX: Convert tag names to UUIDs ---
-    tag_names = request.args.getlist('tags')
-    tag_ids = [TAGS_MAP[t] for t in tag_names if t in TAGS_MAP]
-    # ---------------------------------------
-    
     demographics = request.args.getlist('demographic')
     ratings = request.args.getlist('rating') or ["safe", "suggestive"]
     sort_by = request.args.get('sort', 'relevance')
     order_dir = request.args.get('order', 'desc')
+    
+    # --- NEW: Get included/excluded UUIDs from the new JS buttons ---
+    included_tags = request.args.getlist('includedTags[]')
+    excluded_tags = request.args.getlist('excludedTags[]')
 
-    # --- PAGINATION LOGIC ---
+    # --- PAGINATION LOGIC (Kept intact) ---
     offset = int(request.args.get('offset', 0))
-    limit = 36 # Your updated limit
+    limit = 36 
 
-    # Update discovery check to use our new tag_ids variable
-    is_discovery = not any([query, statuses, types, tag_ids, demographics])
+    # 2. Fetch Official Tags from MangaDex dynamically for the UI
+    try:
+        tags_resp = requests.get('https://api.mangadex.org/manga/tag').json()
+        all_tags = tags_resp.get('data', [])
+        
+        tag_groups = {'format': [], 'genre': [], 'theme': []}
+        for tag in all_tags:
+            group = tag['attributes']['group']
+            if group in tag_groups:
+                tag_groups[group].append({
+                    'id': tag['id'],
+                    'name': tag['attributes']['name']['en']
+                })
+                
+        for group in tag_groups:
+            tag_groups[group] = sorted(tag_groups[group], key=lambda x: x['name'])
+    except Exception as e:
+        print(f"Error fetching tags: {e}")
+        tag_groups = {'format': [], 'genre': [], 'theme': []}
 
-    # 2. Build params as a Dictionary
+    # Discovery check updated to watch the new included_tags
+    is_discovery = not any([query, statuses, types, included_tags, demographics])
+
+    # 3. Build params as a Dictionary for MangaDex
     params = {
         'limit': limit,
         'offset': offset,
         'includes[]': ['cover_art'],
         'contentRating[]': ratings,
-        'includedTagsMode': 'OR'
+        # Defaulting to AND so selecting multiple tags narrows the search
+        'includedTagsMode': 'AND', 
+        'excludedTagsMode': 'OR'
     }
 
     if is_discovery:
@@ -487,17 +507,14 @@ def search():
         if query: params['title'] = query
         if statuses: params['status[]'] = statuses
         if types: params['originalLanguage[]'] = types
-        # --- FIX: Use mapped IDs here ---
-        if tag_ids: params['includedTags[]'] = tag_ids
-        # --------------------------------
         if demographics: params['publicationDemographic[]'] = demographics
+        
+        # --- NEW: Attach the UUID arrays directly ---
+        if included_tags: params['includedTags[]'] = included_tags
+        if excluded_tags: params['excludedTags[]'] = excluded_tags
 
     manga_data = []
     try:
-        # Debugging: this will print the clean URL with UUIDs so you can verify it works
-        debug_url = requests.Request('GET', f"{API_URL}/manga", params=params).prepare().url
-        print(f"--- ACTIVE SEARCH SIGNAL ---\nURL: {debug_url}\n------------------------")
-        
         resp = requests.get(f"{API_URL}/manga", params=params).json()
         
         for m in resp.get('data', []):
@@ -518,19 +535,19 @@ def search():
     except Exception as e:
         print(f"Search API Error: {e}")
 
-    # --- THE AJAX FIX ---
-    # If the request comes from the "View More" button, only return the cards
+    # --- THE AJAX FIX (Kept intact for your Load More button!) ---
     if request.args.get('ajax'):
         return render_template('manga grid partial.html', manga_list=manga_data)
 
-    # Otherwise, return the full page as usual
+    # 4. Return everything to search.html
     return render_template('search.html', 
                            manga_list=manga_data, 
-                           all_tags=TAGS_MAP,
+                           tag_groups=tag_groups,             # NEW
+                           included_tags=included_tags,       # NEW
+                           excluded_tags=excluded_tags,       # NEW
                            is_discovery=is_discovery,
                            selected_statuses=statuses,
                            selected_types=types,
-                           selected_tags=tag_names, # Keep names for the checkboxes
                            selected_demographics=demographics,
                            selected_ratings=ratings,
                            current_sort=sort_by,

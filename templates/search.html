@@ -6,13 +6,48 @@
     <meta name="referrer" content="no-referrer" />
     <script src="https://cdn.tailwindcss.com"></script>
     <title>Search Manga - MangaLocal</title>
+    <style>
+      .tag-btn {
+        transition: all 0.2s ease;
+        cursor: pointer;
+        -webkit-user-select: none; /* Add this line to fix the Safari warning */
+        user-select: none;
+      }
+      /* State 0: Neutral */
+      .tag-state-0 {
+        background-color: transparent;
+        color: #9ca3af;
+        border-color: #374151;
+      }
+      .tag-state-0:hover {
+        background-color: #374151;
+        color: white;
+      }
+      /* State 1: Include (Green) */
+      .tag-state-1 {
+        background-color: rgba(22, 163, 74, 0.15);
+        color: #4ade80;
+        border-color: #22c55e;
+      }
+      /* State 2: Exclude (Red) */
+      .tag-state-2 {
+        background-color: rgba(220, 38, 38, 0.15);
+        color: #f87171;
+        border-color: #ef4444;
+      }
+    </style>
   </head>
   <body class="bg-black text-gray-200 min-h-screen flex flex-col">
     <!-- Master Nav Integration -->
     {% include 'nav.html' %}
 
     <main class="p-4 max-w-7xl mx-auto w-full">
-      <form action="/search" method="GET" class="space-y-4">
+      <form
+        id="advanced-search-form"
+        action="/search"
+        method="GET"
+        class="space-y-4"
+      >
         <!-- SEARCH BAR ROW -->
         <div class="flex gap-2">
           <input
@@ -222,27 +257,46 @@
 
                 <!-- Column 4 & 5: Tags -->
                 <div class="lg:col-span-1 xl:col-span-2 space-y-3">
-                  <h3
-                    class="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2"
-                  >
-                    Tags / Genres
-                  </h3>
                   <div
-                    class="grid grid-cols-2 gap-x-4 gap-y-2 h-[200px] overflow-y-auto pr-2 custom-scrollbar"
+                    class="border-b border-gray-800 pb-2 flex justify-between items-end"
                   >
-                    {% for name, uuid in all_tags.items() %}
-                      <label
-                        class="flex items-center gap-2 text-[11px] cursor-pointer hover:text-orange-400 transition truncate"
-                      >
-                        <input
-                          type="checkbox"
-                          name="tags"
-                          value="{{ uuid }}"
-                          class="accent-orange-500"
-                          {% if uuid in selected_tags %}checked{% endif %}
-                        />
-                        {{ name }}
-                      </label>
+                    <h3
+                      class="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest"
+                    >
+                      Tags / Genres
+                    </h3>
+                    <span class="text-[9px] text-gray-600 italic"
+                      >Click once to include, twice to exclude</span
+                    >
+                  </div>
+
+                  <div
+                    class="h-[280px] overflow-y-auto pr-2 custom-scrollbar space-y-6"
+                  >
+                    {% for group_name, tags in tag_groups.items() %}
+                      <div>
+                        <h4
+                          class="text-[10px] font-bold text-gray-400 capitalize mb-3"
+                        >
+                          {{ group_name }}
+                        </h4>
+                        <div class="flex flex-wrap gap-2">
+                          {% for tag in tags %}
+                            {% set state = 0 %}
+                            {% if tag.id in included_tags %}{% set state = 1 %}{% endif %}
+                            {% if tag.id in excluded_tags %}{% set state = 2 %}{% endif %}
+
+                            <div
+                              onclick="toggleTag(this)"
+                              data-id="{{ tag.id }}"
+                              data-state="{{ state }}"
+                              class="tag-btn tag-state-{{ state }} border rounded-md px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest"
+                            >
+                              {{ tag.name }}
+                            </div>
+                          {% endfor %}
+                        </div>
+                      </div>
                     {% endfor %}
                   </div>
                 </div>
