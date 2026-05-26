@@ -397,3 +397,30 @@ document.addEventListener("DOMContentLoaded", function () {
   })
  }
 })
+
+// ==========================================
+// SUBSCRIPTION: PAYMENT MODAL LOGIC
+// ==========================================
+
+window.openPaymentModal = function () {
+ const overlay = document.getElementById("payment-modal-overlay")
+ const card = document.getElementById("payment-modal-card")
+
+ // Safety check: Only run if the modal actually exists on the current page
+ if (overlay && card) {
+  overlay.classList.remove("opacity-0", "pointer-events-none")
+  card.classList.remove("scale-95")
+  card.classList.add("scale-100")
+ }
+}
+
+window.closePaymentModal = function () {
+ const overlay = document.getElementById("payment-modal-overlay")
+ const card = document.getElementById("payment-modal-card")
+
+ if (overlay && card) {
+  overlay.classList.add("opacity-0", "pointer-events-none")
+  card.classList.remove("scale-100")
+  card.classList.add("scale-95")
+ }
+}

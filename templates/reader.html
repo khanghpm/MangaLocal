@@ -85,6 +85,17 @@
   </div>
 
   <main class="flex-grow flex flex-col items-center">
+   
+   {% if not current_user.is_authenticated or not current_user.is_supporter %}
+     <div class="w-full max-w-3xl mx-auto mt-8 mb-4 bg-[#161616] border border-gray-800 rounded-xl p-8 flex flex-col items-center justify-center text-center shadow-lg">
+       <span class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-2 block">Advertisement</span>
+       <p class="text-gray-400 text-sm mb-4">Want to read without interruptions?</p>
+       <a href="/support-us" class="bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold px-6 py-2 rounded-lg uppercase tracking-widest transition">
+         Remove Ads
+       </a>
+     </div>
+   {% endif %}
+
    <div class="w-full max-w-4xl space-y-1 bg-[#0a0a0a]">
     {% for url in images %}
     <img 
@@ -93,9 +104,19 @@
     referrerpolicy="no-referrer" 
     alt="Manga Page {{ loop.index }}" 
     class="w-full h-auto block" 
-/>
+    />
     {% endfor %}
    </div>
+
+   {% if not current_user.is_authenticated or not current_user.is_supporter %}
+     <div class="w-full max-w-3xl mx-auto mt-8 mb-2 bg-[#161616] border border-gray-800 rounded-xl p-8 flex flex-col items-center justify-center text-center shadow-lg">
+       <span class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-2 block">Advertisement</span>
+       <p class="text-gray-400 text-sm mb-4">Want to read without interruptions?</p>
+       <a href="/support-us" class="bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold px-6 py-2 rounded-lg uppercase tracking-widest transition">
+         Remove Ads
+       </a>
+     </div>
+   {% endif %}
 
    <div class="py-20 flex flex-col items-center gap-6">
     {% if next_id %}

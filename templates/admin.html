@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Command Center - MangaLocal</title>
+  </head>
+  <body class="bg-black text-gray-200 min-h-screen flex flex-col">
+    {% include 'nav.html' %}
+
+    <main class="max-w-7xl mx-auto w-full px-4 py-12 flex-grow">
+      <h1 class="text-3xl font-bold mb-8 text-white flex items-center gap-3">
+        <span class="text-orange-500">⚡</span> Command Center
+      </h1>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div
+              class="mb-6 px-4 py-3 rounded-lg text-xs font-bold uppercase {{ 'bg-red-500/10 text-red-500 border border-red-500/50' if category == 'error' else 'bg-orange-500/10 text-orange-500 border border-orange-500/50' }}"
+            >
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <div class="grid lg:grid-cols-2 gap-8">
+        <div
+          class="bg-[#121212] border border-gray-800 rounded-xl p-6 shadow-2xl"
+        >
+          <h2
+            class="text-lg font-bold text-white mb-6 uppercase tracking-widest border-b border-gray-800 pb-4"
+          >
+            Registered Users
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-gray-400">
+              <thead class="text-xs uppercase bg-black text-gray-500">
+                <tr>
+                  <th class="px-4 py-3 rounded-l-lg">User</th>
+                  <th class="px-4 py-3">Status</th>
+                  <th class="px-4 py-3 rounded-r-lg text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for u in users %}
+                  <tr
+                    class="border-b border-gray-800 hover:bg-white/5 transition"
+                  >
+                    <td class="px-4 py-4">
+                      <div class="font-bold text-white">
+                        {{ u.username or 'No Name' }}
+                      </div>
+                      <div class="text-xs">{{ u.email }}</div>
+                    </td>
+                    <td class="px-4 py-4">
+                      {% if u.is_admin %}
+                        <span
+                          class="bg-purple-500/20 text-purple-500 px-2 py-1 rounded text-[10px] font-bold uppercase"
+                          >Admin</span
+                        >
+                      {% elif u.is_supporter %}
+                        <span
+                          class="bg-orange-500/20 text-orange-500 px-2 py-1 rounded text-[10px] font-bold uppercase"
+                          >Supporter +</span
+                        >
+                      {% else %}
+                        <span
+                          class="bg-gray-800 text-gray-400 px-2 py-1 rounded text-[10px] font-bold uppercase"
+                          >Standard</span
+                        >
+                      {% endif %}
+                    </td>
+                    <td class="px-4 py-4 text-right flex justify-end gap-2">
+                      <form action="/admin" method="POST" class="inline">
+                        <input
+                          type="hidden"
+                          name="action"
+                          value="toggle_supporter"
+                        />
+                        <input
+                          type="hidden"
+                          name="user_id"
+                          value="{{ u.id }}"
+                        />
+                        <button
+                          type="submit"
+                          class="bg-gray-800 hover:bg-orange-600 text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase transition"
+                          title="Toggle Supporter"
+                        >
+                          💎
+                        </button>
+                      </form>
+                      {% if u.id != current_user.id %}
+                        <form
+                          action="/admin"
+                          method="POST"
+                          class="inline"
+                          onsubmit="return confirm('Are you sure you want to ban and delete this user?');"
+                        >
+                          <input
+                            type="hidden"
+                            name="action"
+                            value="delete_user"
+                          />
+                          <input
+                            type="hidden"
+                            name="user_id"
+                            value="{{ u.id }}"
+                          />
+                          <button
+                            type="submit"
+                            class="bg-gray-800 hover:bg-red-600 text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase transition"
+                            title="Delete User"
+                          >
+                            🗑️
+                          </button>
+                        </form>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div
+          class="bg-[#121212] border border-gray-800 rounded-xl p-6 shadow-2xl"
+        >
+          <h2
+            class="text-lg font-bold text-white mb-6 uppercase tracking-widest border-b border-gray-800 pb-4"
+          >
+            Admin Recommends
+          </h2>
+
+          <form action="/admin" method="POST" class="flex gap-2 mb-8">
+            <input type="hidden" name="action" value="add_pick" />
+            <input
+              type="text"
+              name="manga_id"
+              placeholder="Paste MangaDex ID here..."
+              required
+              class="flex-grow bg-black border border-gray-800 rounded-lg px-4 py-2 text-sm text-white focus:border-orange-500 outline-none"
+            />
+            <button
+              type="submit"
+              class="bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-2 rounded-lg text-xs uppercase tracking-widest transition shadow-lg"
+            >
+              Pin to Home
+            </button>
+          </form>
+
+          <div class="space-y-3">
+            {% for pick in picks %}
+              <div
+                class="flex items-center justify-between bg-black border border-gray-800 rounded-lg p-3"
+              >
+                <div class="text-sm font-mono text-gray-400">
+                  {{ pick.manga_id }}
+                </div>
+                <form action="/admin" method="POST" class="inline">
+                  <input type="hidden" name="action" value="remove_pick" />
+                  <input type="hidden" name="pick_id" value="{{ pick.id }}" />
+                  <button
+                    type="submit"
+                    class="text-gray-500 hover:text-red-500 text-xs font-bold uppercase transition"
+                  >
+                    Remove
+                  </button>
+                </form>
+              </div>
+            {% else %}
+              <div class="text-center text-sm text-gray-600 py-8 italic">
+                No custom manga pinned to homepage yet.
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </main>
+    {% include 'auth_modal.html' %}
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>

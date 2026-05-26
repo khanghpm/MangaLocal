@@ -113,9 +113,17 @@
             {% endif %}
 
             <span
-              class="text-xs text-gray-400 font-bold uppercase tracking-widest"
+              class="flex items-center text-xs text-gray-400 font-bold uppercase tracking-widest"
             >
               {{ current_user.username or current_user.email.split('@')[0] }}
+
+              {% if current_user.is_supporter %}
+                <span
+                  class="text-red-500 font-black ml-1 text-base leading-none"
+                  title="Premium Supporter"
+                  >+</span
+                >
+              {% endif %}
             </span>
 
             <svg
@@ -151,12 +159,29 @@
               >
                 <span class="text-base">🕒</span> History
               </a>
+
+              <a
+                href="/support-us"
+                class="flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-orange-500 hover:bg-orange-500/10 rounded-lg transition"
+              >
+                <span class="text-base">💎</span> Subscription
+              </a>
+
               <a
                 href="/setting"
                 class="flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition"
               >
                 <span class="text-base">⚙️</span> Settings
               </a>
+              {% if current_user.is_admin %}
+                <a
+                  href="/admin"
+                  class="flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-yellow-500 hover:bg-yellow-500/10 rounded-lg transition"
+                >
+                  <span class="text-base">⚡</span> Command Center
+                </a>
+              {% endif %}
+
               <div class="h-px bg-gray-800 my-1 mx-2"></div>
               <a
                 href="/logout"

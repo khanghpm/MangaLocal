@@ -1,9 +1,10 @@
 import requests
 from itsdangerous import URLSafeTimedSerializer
-from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from datetime import datetime, date
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -43,14 +44,29 @@ TAGS_MAP = {
 }
 
 # --- USER MODEL ---
-# --- USER MODEL ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    # NEW FIELDS:
     username = db.Column(db.String(50), nullable=True)
     profile_pic = db.Column(db.String(500), nullable=True, default='https://ui-avatars.com/api/?name=User&background=ea580c&color=fff')
+    
+    # --- NEW: Account Roles ---
+    is_admin = db.Column(db.Boolean, default=False)
+    is_supporter = db.Column(db.Boolean, default=False)
+
+# --- NEW: Daily Reading Tracker ---
+class DailyRead(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    read_date = db.Column(db.Date, nullable=False)
+    count = db.Column(db.Integer, default=0)
+
+    # --- NEW: Admin Curated Manga ---
+class AdminPick(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    manga_id = db.Column(db.String(100), unique=True, nullable=False)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Bookmark(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -73,6 +89,15 @@ class History(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # If they aren't logged in OR aren't an admin, kick them out (403 Forbidden)
+        if not current_user.is_authenticated or not current_user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
 # --- AUTHENTICATION ROUTES ---
 
 @app.route('/register', methods=['POST'])
@@ -90,6 +115,10 @@ def register():
         email=email, 
         password=generate_password_hash(password, method='pbkdf2:sha256')
     )
+    # --- NEW: Auto-upgrade the developer account ---
+    if email == 'khanghpm@gmail.com':
+        new_user.is_admin = True
+        new_user.is_supporter = True
     db.session.add(new_user)
     db.session.commit()
     
@@ -192,13 +221,6 @@ def toggle_bookmark():
         db.session.commit()
         return jsonify({"status": "added"})
     
-@app.route('/history')
-@login_required
-def history():
-    # Fetch history and order it so the most recently read is at the top
-    user_history = History.query.filter_by(user_id=current_user.id).order_by(History.last_read.desc()).all()
-    return render_template('history.html', history=user_history)
-    
 @app.route('/')
 def index():
     # 1. Fetch "Hot Updates" (Aligned to your new 36-card grid)
@@ -230,7 +252,38 @@ def index():
             "type": "Manga" if attrs.get('originalLanguage') == 'ja' else "Manhwa/Manhua"
         })
 
-    # 2. Fetch "Recommendations"
+    # ==========================================
+    # NEW: 2. Fetch Admin Curated Picks
+    # ==========================================
+    # Get up to 12 of the most recently added admin picks from the database
+    db_picks = AdminPick.query.order_by(AdminPick.added_at.desc()).limit(12).all()
+    pick_ids = [p.manga_id for p in db_picks]
+    
+    admin_data = []
+    if pick_ids:
+        # Ask MangaDex for these specific IDs
+        pick_params = {
+            "ids[]": pick_ids,
+            "includes[]": ["cover_art"]
+        }
+        pick_resp = requests.get(f"{API_URL}/manga", params=pick_params).json()
+        
+        for m in pick_resp.get('data', []):
+            attrs = m['attributes']
+            t_attr = attrs['title']
+            title = t_attr.get('en') or next(iter(t_attr.values()), "Untitled")
+            
+            cover_file = next((r['attributes']['fileName'] for r in m.get('relationships', []) 
+                             if r['type'] == 'cover_art' and 'attributes' in r), None)
+            cover = f"https://uploads.mangadex.org/covers/{m['id']}/{cover_file}.256.jpg" if cover_file else ""
+
+            admin_data.append({
+                "id": m['id'], "title": title, "cover": cover,
+                "status": attrs.get('status', '').capitalize(),
+                "type": "Manga" if attrs.get('originalLanguage') == 'ja' else "Manhwa/Manhua"
+            })
+
+    # 3. Fetch "Recommendations"
     rec_params = {
         "limit": 6, 
         "offset": 40,
@@ -257,7 +310,8 @@ def index():
             "type": "Manga" if attrs.get('originalLanguage') == 'ja' else "Manhwa/Manhua"
         })
 
-    return render_template('index.html', manga_list=manga_data, rec_list=rec_data, next_offset=20)
+    # UPDATED: Make sure admin_list is passed to the HTML template!
+    return render_template('index.html', manga_list=manga_data, rec_list=rec_data, admin_list=admin_data, next_offset=20)
 
 @app.route('/api/load-more-hot')
 def load_more_hot():
@@ -681,6 +735,55 @@ def reader(chapter_id):
         cover_file = next((r['attributes']['fileName'] for r in m_resp['data'].get('relationships', []) if r['type'] == 'cover_art' and 'attributes' in r), None)
         manga_cover = f"https://uploads.mangadex.org/covers/{manga_id}/{cover_file}.256.jpg" if cover_file else ""
 
+        # ==========================================
+        # PHASE 3: THE GATEKEEPER (DAILY LIMITS)
+        # ==========================================
+        today_str = date.today().isoformat()
+        
+        # 1. GUEST LOGIC (Limit: 1 Manga per day)
+        if not current_user.is_authenticated:
+            # Create a fresh daily tracker if it's a new day
+            if 'guest_reads' not in session or session.get('guest_date') != today_str:
+                session['guest_reads'] = []
+                session['guest_date'] = today_str
+                
+            # If they are opening a manga they haven't read today
+            if manga_id not in session['guest_reads']:
+                if len(session['guest_reads']) >= 1:
+                    flash("Guests can only read 1 manga per day. Please log in for more!", "error")
+                    return redirect('/')
+                # Add this manga to their allowed list for today
+                session['guest_reads'].append(manga_id)
+                session.modified = True
+
+        # 2. STANDARD USER LOGIC (Limit: 4 Manga per day)
+        elif not current_user.is_supporter:
+            # Find or create today's database tracker for this user
+            tracker = DailyRead.query.filter_by(user_id=current_user.id, read_date=date.today()).first()
+            if not tracker:
+                tracker = DailyRead(user_id=current_user.id, read_date=date.today(), count=0)
+                db.session.add(tracker)
+                db.session.commit()
+                
+            # Create a session tracker so we don't double-charge them for reading next chapters
+            if 'user_reads' not in session or session.get('user_date') != today_str:
+                session['user_reads'] = []
+                session['user_date'] = today_str
+                
+            if manga_id not in session['user_reads']:
+                if tracker.count >= 4:
+                    flash("You have reached your daily limit of 4 manga. Upgrade to Premium for unlimited reading!", "error")
+                    return redirect('/support-us')
+                
+                # Charge them 1 read token and save to database
+                tracker.count += 1
+                session['user_reads'].append(manga_id)
+                session.modified = True
+                db.session.commit()
+                
+        # 3. SUPPORTERS bypass all of this automatically!
+        # ==========================================
+
         # 3. Fetch all chapters for the nav bar (Language Synchronized)
         # Using the detected 'chapter_lang' instead of hardcoded 'en'
         feed_params = {
@@ -779,6 +882,71 @@ def reader(chapter_id):
 @app.route('/privacy')
 def privacy():
     return render_template('privacy.html')
+
+# ==========================================
+# PHASE 4: ADMIN COMMAND CENTER ROUTES
+# ==========================================
+@app.route('/admin', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_dashboard():
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        # --- USER MANAGEMENT ACTIONS ---
+        if action == 'toggle_supporter':
+            user = User.query.get(request.form.get('user_id'))
+            if user:
+                user.is_supporter = not user.is_supporter # Flips True to False, or False to True
+                db.session.commit()
+                flash(f"Updated supporter status for {user.email}", "success")
+                
+        elif action == 'delete_user':
+            user = User.query.get(request.form.get('user_id'))
+            # Safety check: Don't let the admin delete themselves!
+            if user and user.id != current_user.id:
+                # Optional: Delete their daily reads/bookmarks too if you set up cascades
+                db.session.delete(user)
+                db.session.commit()
+                flash("User permanently deleted.", "error")
+                
+        # --- MANGA CURATION ACTIONS ---
+        elif action == 'add_pick':
+            manga_id = request.form.get('manga_id').strip()
+            if manga_id and not AdminPick.query.filter_by(manga_id=manga_id).first():
+                new_pick = AdminPick(manga_id=manga_id)
+                db.session.add(new_pick)
+                db.session.commit()
+                flash("Manga added to Featured Picks!", "success")
+                
+        elif action == 'remove_pick':
+            pick = AdminPick.query.get(request.form.get('pick_id'))
+            if pick:
+                db.session.delete(pick)
+                db.session.commit()
+                flash("Manga removed from Featured Picks.", "error")
+                
+        return redirect('/admin')
+
+    # Fetch all data to display on the dashboard
+    users = User.query.all()
+    picks = AdminPick.query.all()
+    return render_template('admin.html', users=users, picks=picks)
+
+# --- SUPPORT US ---
+@app.route('/support-us')
+def support_us():
+    return render_template('support_us.html')
+
+@app.route('/api/upgrade', methods=['POST'])
+@login_required
+def process_upgrade():
+    # TODO: In production, this will be protected by a MoMo/Stripe webhook verification
+    current_user.is_supporter = True
+    db.session.commit()
+    
+    flash("Payment successful! You are now a MangaLocal Supporter.", "success")
+    return redirect(url_for('setting')) # Redirect them to settings to see their new badge!
 
 # --- STARTUP ---
 # 1. Place this AFTER all your models and routes are defined!
