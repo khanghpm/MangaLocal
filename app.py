@@ -221,6 +221,13 @@ def toggle_bookmark():
         db.session.commit()
         return jsonify({"status": "added"})
     
+    # === PASTE THIS NEW ROUTE HERE ===
+@app.route('/history')
+@login_required
+def history():
+    user_history = History.query.filter_by(user_id=current_user.id).order_by(History.last_read.desc()).all()
+    return render_template('history.html', history=user_history)
+    
 @app.route('/')
 def index():
     # 1. Fetch "Hot Updates" (Aligned to your new 36-card grid)
