@@ -181,6 +181,23 @@
         </div>
       </div>
     </main>
+    <footer class="bg-[#121212] border-t border-gray-800 pt-12 pb-8">
+      <div class="max-w-7xl mx-auto px-8 text-center">
+        <div
+          class="flex justify-center gap-8 text-xs font-bold text-gray-500 uppercase mb-8"
+        >
+          <a href="/" class="hover:text-orange-500 transition">Home</a>
+          <a href="/random" class="hover:text-orange-500 transition">Random</a>
+          <a href="/privacy" class="hover:text-orange-500 transition"
+            >Privacy Policy</a
+          >
+          <a href="#" class="hover:text-orange-500 transition">Contact</a>
+        </div>
+        <p class="text-[10px] text-gray-600 uppercase tracking-widest">
+          Copyright © <span class="text-orange-500/80">MangaLocal</span>
+        </p>
+      </div>
+    </footer>
     {% include 'auth_modal.html' %}
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   </body>
