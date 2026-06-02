@@ -1,4 +1,5 @@
 import requests
+from validators import ValidationError, validate_email, validate_password, validate_username, validate_search_query
 from itsdangerous import URLSafeTimedSerializer
 from datetime import datetime, date
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, abort
@@ -102,41 +103,82 @@ def admin_required(f):
 
 @app.route('/register', methods=['POST'])
 def register():
-    email = request.form.get('email')
-    password = request.form.get('password')
+    email = request.form.get('email', '').strip()
+    password = request.form.get('password', '').strip()
+    confirm_password = request.form.get('confirm_password', '').strip()
     
-    user = User.query.filter_by(email=email).first()
-    if user:
-        flash('Email already exists!')
+    try:
+        # 1. Validate email
+        validate_email(email)
+        
+        # 2. Validate password
+        validate_password(password)
+        
+        # 3. Check passwords match
+        if password != confirm_password:
+            flash('Passwords do not match!', 'error')
+            return redirect(url_for('index'))
+        
+        # 4. Check if email already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash('Email already exists! Please log in or use a different email.', 'error')
+            return redirect(url_for('index'))
+        
+        # 5. Create new user
+        new_user = User(
+            email=email,
+            password=generate_password_hash(password, method='pbkdf2:sha256')
+        )
+        
+        # 6. Set admin if it's your email
+        if email == 'khanghpm@gmail.com':
+            new_user.is_admin = True
+            new_user.is_supporter = True
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        login_user(new_user)
+        flash('Registration successful! Welcome aboard!', 'success')
         return redirect(url_for('index'))
-
-    # Hash the password for security
-    new_user = User(
-        email=email, 
-        password=generate_password_hash(password, method='pbkdf2:sha256')
-    )
-    # --- NEW: Auto-upgrade the developer account ---
-    if email == 'khanghpm@gmail.com':
-        new_user.is_admin = True
-        new_user.is_supporter = True
-    db.session.add(new_user)
-    db.session.commit()
     
-    login_user(new_user)
-    return redirect(url_for('index'))
+    except ValidationError as e:
+        flash(str(e), 'error')
+        return redirect(url_for('index'))
+    except Exception as e:
+        print(f"Registration error: {e}")
+        flash('An unexpected error occurred during registration.', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/login', methods=['POST'])
 def login():
-    email = request.form.get('email')
-    password = request.form.get('password')
-    user = User.query.filter_by(email=email).first()
-
-    if not user or not check_password_hash(user.password, password):
-        flash('Please check your login details and try again.')
+    email = request.form.get('email', '').strip()
+    password = request.form.get('password', '').strip()
+    
+    try:
+        # 1. Validate inputs not empty
+        if not email or not password:
+            flash('Email and password are required!', 'error')
+            return redirect(url_for('index'))
+        
+        # 2. Find user
+        user = User.query.filter_by(email=email).first()
+        
+        # 3. Check credentials
+        if not user or not check_password_hash(user.password, password):
+            flash('Invalid email or password!', 'error')
+            return redirect(url_for('index'))
+        
+        # 4. Login user
+        login_user(user)
+        flash(f'Welcome back, {user.email}!', 'success')
         return redirect(url_for('index'))
-
-    login_user(user)
-    return redirect(url_for('index'))
+    
+    except Exception as e:
+        print(f"Login error: {e}")
+        flash('An unexpected error occurred during login.', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/logout')
 @login_required
@@ -509,6 +551,13 @@ def manga_details(id):
 def search():
     # 1. Capture user inputs
     query = request.args.get('q', '').strip()
+    
+    try:
+        if query:
+            validate_search_query(query)
+    except ValidationError as e:
+        flash(str(e), 'error')
+        query = ''
     statuses = request.args.getlist('status')
     types = request.args.getlist('type')
     demographics = request.args.getlist('demographic')
