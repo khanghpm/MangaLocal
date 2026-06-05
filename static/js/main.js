@@ -510,3 +510,232 @@ window.closePaymentModal = function () {
   show(0);
   startAuto();
 })();
+
+
+// ============================================================
+//  READER SETTINGS — dán khối này vào CUỐI main.js
+//  Quản lý 4 mode đọc (single/double/long/wide), reading direction,
+//  header visibility, progress bar position. Lưu bằng localStorage.
+// ============================================================
+;(function () {
+  const container = document.getElementById("reader-image-container");
+  if (!container) return; // chỉ chạy trên trang reader
+
+  const KEY = "mangalocal_reader_prefs";
+  const defaults = {
+    display: "long",     // single | double | long | wide
+    dir: "ltr",          // ltr | rtl
+    header: "shown",     // shown | hidden
+    progress: "bottom",  // hidden | bottom | left | right
+  };
+  let prefs = Object.assign({}, defaults);
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY));
+    if (saved) prefs = Object.assign(prefs, saved);
+  } catch (e) {}
+
+  const images = Array.from(container.querySelectorAll("img"));
+  let pageIndex = 0; // trang hiện tại cho single/double
+
+  function savePrefs() {
+    try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch (e) {}
+  }
+
+  // ---------- Áp dụng chế độ hiển thị ----------
+  function applyDisplay() {
+    container.classList.remove("mode-wide", "mode-paged", "dir-rtl");
+    images.forEach((img) => { img.classList.remove("page-visible"); img.style.display = ""; });
+
+    // Ẩn khối "hết chương / quảng cáo" khi ở single/double/wide để không vướng thao tác click lật trang
+    const extras = document.querySelectorAll("[data-reader-extra]");
+    const isPagedOrWide = (prefs.display === "single" || prefs.display === "double" || prefs.display === "wide");
+    extras.forEach((el) => { el.style.display = isPagedOrWide ? "none" : ""; });
+
+    if (prefs.display === "long") {
+      // cuộn dọc — hiện tất cả ảnh (mặc định)
+      images.forEach((img) => (img.style.display = "block"));
+    } else if (prefs.display === "wide") {
+      images.forEach((img) => (img.style.display = "block"));
+      container.classList.add("mode-wide");
+      if (prefs.dir === "rtl") container.classList.add("dir-rtl");
+    } else {
+      // single hoặc double: ẩn hết, chỉ hiện trang hiện tại
+      container.classList.add("mode-paged");
+      if (prefs.dir === "rtl") container.classList.add("dir-rtl");
+      showPages();
+    }
+    updateProgress();
+  }
+
+  function showPages() {
+    images.forEach((img) => img.classList.remove("page-visible"));
+    if (prefs.display === "single") {
+      if (images[pageIndex]) images[pageIndex].classList.add("page-visible");
+    } else if (prefs.display === "double") {
+      let a = pageIndex, b = pageIndex + 1;
+      const order = prefs.dir === "rtl" ? [b, a] : [a, b];
+      order.forEach((i) => { if (images[i]) images[i].classList.add("page-visible"); });
+    }
+  }
+
+  function maxIndex() {
+    return prefs.display === "double"
+      ? Math.max(0, images.length - 2)
+      : Math.max(0, images.length - 1);
+  }
+  function step() { return prefs.display === "double" ? 2 : 1; }
+
+  function nextPage() {
+    pageIndex = Math.min(pageIndex + step(), maxIndex());
+    showPages(); updateProgress();
+    window.scrollTo({ top: 0 });
+  }
+  function prevPage() {
+    pageIndex = Math.max(pageIndex - step(), 0);
+    showPages(); updateProgress();
+    window.scrollTo({ top: 0 });
+  }
+
+  // ---------- Click trái/phải cho single & double ----------
+  container.addEventListener("click", (e) => {
+    if (prefs.display !== "single" && prefs.display !== "double") return;
+    const x = e.clientX;
+    const leftSide = x < window.innerWidth / 2;
+    // ltr: trái=lùi, phải=tiếp ; rtl: ngược lại
+    if (prefs.dir === "ltr") { leftSide ? prevPage() : nextPage(); }
+    else { leftSide ? nextPage() : prevPage(); }
+  });
+
+  // ---------- Wide strip: giữ chuột trái ở mép để cuộn ngang (không quá nhanh) ----------
+  let wideHold = null;
+  container.addEventListener("mousedown", (e) => {
+    if (prefs.display !== "wide" || e.button !== 0) return;
+    const leftSide = e.clientX < window.innerWidth / 2;
+    // ltr: phải=tiếp(cuộn xuôi), trái=lùi ; rtl thì đảo
+    let forward = prefs.dir === "ltr" ? !leftSide : leftSide;
+    const dirSign = forward ? 1 : -1;
+    // tốc độ vừa phải: 8px mỗi ~16ms
+    wideHold = setInterval(() => {
+      container.scrollLeft += dirSign * 8;
+      updateProgress();
+    }, 16);
+  });
+  function stopWide() { if (wideHold) { clearInterval(wideHold); wideHold = null; } }
+  container.addEventListener("mouseup", stopWide);
+  container.addEventListener("mouseleave", stopWide);
+
+  // ---------- Progress bar ----------
+  const wrap = document.getElementById("reader-progress-wrap");
+  const bar = document.getElementById("reader-progress-bar");
+  function applyProgressPos() {
+    if (!wrap) return;
+    wrap.setAttribute("data-pos", prefs.progress);
+  }
+  function updateProgress() {
+    if (!wrap || !bar || prefs.progress === "hidden") return;
+    let pct = 0;
+    if (prefs.display === "long") {
+      const h = document.documentElement.scrollHeight - window.innerHeight;
+      pct = h > 0 ? (window.scrollY / h) * 100 : 0;
+    } else if (prefs.display === "wide") {
+      const w = container.scrollWidth - container.clientWidth;
+      pct = w > 0 ? (Math.abs(container.scrollLeft) / w) * 100 : 0;
+    } else {
+      pct = (maxIndex() > 0 ? (pageIndex / maxIndex()) * 100 : 100);
+    }
+    pct = Math.max(0, Math.min(100, pct));
+    if (prefs.progress === "bottom") bar.style.width = pct + "%";
+    else bar.style.height = pct + "%";
+  }
+  window.addEventListener("scroll", updateProgress);
+
+  // ---------- Header visibility ----------
+  function applyHeader() {
+    const hide = prefs.header === "hidden";
+    document.querySelectorAll('[data-reader-header]').forEach((el) => {
+      el.style.display = hide ? "none" : "";
+    });
+    // Khi header bị ẩn, hiện một nút bánh răng nổi để vẫn mở lại được Reader Settings
+    let fab = document.getElementById("reader-fab-settings");
+    if (hide) {
+      if (!fab) {
+        fab = document.createElement("button");
+        fab.id = "reader-fab-settings";
+        fab.type = "button";
+        fab.title = "Reader Settings";
+        fab.setAttribute("aria-label", "Reader Settings");
+        fab.onclick = function () { window.openReaderSettings(); };
+        fab.style.cssText =
+          "position:fixed;top:12px;right:12px;z-index:55;padding:10px;border-radius:9999px;" +
+          "background:rgba(30,30,30,.85);color:#f97316;border:1px solid #3a3a3a;cursor:pointer;" +
+          "box-shadow:0 4px 14px rgba(0,0,0,.4);backdrop-filter:blur(4px);transition:opacity .2s;";
+        fab.innerHTML =
+          '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>' +
+          '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>';
+        document.body.appendChild(fab);
+      }
+      fab.style.display = "block";
+    } else if (fab) {
+      fab.style.display = "none";
+    }
+  }
+
+  // ---------- Cập nhật trạng thái nút trong popup ----------
+  function syncButtons() {
+    const map = [
+      [".rs-display", prefs.display],
+      [".rs-dir", prefs.dir],
+      [".rs-header", prefs.header],
+      [".rs-progress", prefs.progress],
+    ];
+    map.forEach(([sel, val]) => {
+      document.querySelectorAll(sel).forEach((b) => {
+        b.classList.toggle("rs-active", b.getAttribute("data-val") === val);
+      });
+    });
+  }
+
+  // ---------- Gắn sự kiện cho các nút popup ----------
+  function bindGroup(sel, field, after) {
+    document.querySelectorAll(sel).forEach((btn) => {
+      btn.addEventListener("click", () => {
+        prefs[field] = btn.getAttribute("data-val");
+        if (field === "display") pageIndex = 0;
+        savePrefs(); syncButtons();
+        if (after) after();
+      });
+    });
+  }
+  bindGroup(".rs-display", "display", applyDisplay);
+  bindGroup(".rs-dir", "dir", applyDisplay);
+  bindGroup(".rs-header", "header", applyHeader);
+  bindGroup(".rs-progress", "progress", () => { applyProgressPos(); updateProgress(); });
+
+  // ---------- Mở / đóng popup (fade in/out) ----------
+  window.openReaderSettings = function () {
+    const ov = document.getElementById("reader-settings-overlay");
+    const card = document.getElementById("reader-settings-card");
+    if (!ov) return;
+    syncButtons();
+    ov.classList.remove("opacity-0", "pointer-events-none");
+    ov.classList.add("opacity-100");
+    if (card) { card.classList.remove("scale-95"); card.classList.add("scale-100"); }
+    document.body.style.overflow = "hidden";
+  };
+  window.closeReaderSettings = function () {
+    const ov = document.getElementById("reader-settings-overlay");
+    const card = document.getElementById("reader-settings-card");
+    if (!ov) return;
+    ov.classList.add("opacity-0", "pointer-events-none");
+    ov.classList.remove("opacity-100");
+    if (card) { card.classList.add("scale-95"); card.classList.remove("scale-100"); }
+    document.body.style.overflow = "";
+  };
+
+  // ---------- Khởi tạo ----------
+  applyProgressPos();
+  applyDisplay();
+  applyHeader();
+  syncButtons();
+})();
