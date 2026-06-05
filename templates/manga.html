@@ -7,7 +7,23 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <title>{{ manga.title }} - MangaLocal</title>
   </head>
-  <body class="bg-[#1a1a1a] text-gray-300 min-h-screen flex flex-col">
+  <body class="bg-[#1a1a1a] text-gray-300 min-h-screen flex flex-col relative">
+    <!-- ===== NỀN MỜ ẢNH BÌA (giống MangaDex) ===== -->
+    <div
+      aria-hidden="true"
+      class="pointer-events-none fixed inset-x-0 top-0 z-0 h-[700px] overflow-hidden"
+    >
+      <div
+        class="absolute inset-0 bg-cover bg-center scale-110 blur-[2px] opacity-95"
+        style="background-image: url('{{ manga.cover }}');"
+      ></div>
+      <div
+        class="absolute inset-0"
+        style="background: linear-gradient(to bottom, rgba(26,26,26,0.15) 0%, rgba(26,26,26,0.65) 55%, rgba(26,26,26,1) 100%);"
+      ></div>
+    </div>
+    <!-- ===== /NỀN MỜ ===== -->
+
     {% include 'nav.html' %}
     {% with messages = get_flashed_messages() %}{% if messages %}
       <div id="flash-container" class="max-w-7xl mx-auto px-8 mt-4">
@@ -21,7 +37,7 @@
       </div>
     {% endif %}{% endwith %}
 
-    <main class="max-w-7xl mx-auto px-4 py-8 flex-grow">
+    <main class="max-w-7xl mx-auto px-4 py-8 flex-grow relative z-10">
       <div class="flex flex-col md:flex-row gap-10 mb-12">
         <div class="w-full md:w-80 flex-shrink-0">
           <img
@@ -132,22 +148,49 @@
             Available Chapters
           </h2>
 
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] text-zinc-500 font-bold uppercase"
-              >Language:</span
+          {# Bảng ánh xạ mã ngôn ngữ -> tên đầy đủ (hiển thị cho người dùng) #}
+          {%
+            set lang_names = {
+              'en':'English', 'vi':'Tiếng Việt', 'ja':'Japanese (日本語)',
+              'ko':'Korean (한국어)', 'zh':'Chinese (中文)', 'zh-hk':'Chinese (Traditional)',
+              'fr':'French (Français)', 'es':'Spanish (Español)', 'es-la':'Spanish (LATAM)',
+              'pt':'Portuguese (Português)', 'pt-br':'Portuguese (Brazil)', 'ru':'Russian (Русский)',
+              'de':'German (Deutsch)', 'it':'Italian (Italiano)', 'id':'Indonesian',
+              'th':'Thai (ไทย)', 'ar':'Arabic (العربية)', 'pl':'Polish', 'tr':'Turkish',
+              'uk':'Ukrainian', 'nl':'Dutch', 'fil':'Filipino', 'hi':'Hindi'
+            }
+          %}
+          <div class="flex items-center gap-3 mb-2">
+            <span
+              class="text-sm text-zinc-400 font-bold uppercase tracking-wide flex items-center gap-1.5"
             >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                ></path>
+              </svg>
+              Language:
+            </span>
             <select
               title="Select Chapter Language"
               aria-label="Select Chapter Language"
               onchange="window.location.href = '/manga/{{ manga.id }}?lang=' + this.value"
-              class="bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-orange-500 py-1 px-2 rounded outline-none focus:border-orange-500 transition cursor-pointer"
+              class="bg-zinc-900 border border-zinc-700 text-sm font-bold text-orange-500 py-2 px-4 rounded-lg outline-none focus:border-orange-500 transition cursor-pointer min-w-[200px]"
             >
               {% for code in available_langs %}
                 <option
                   value="{{ code }}"
                   {% if code == current_lang %}selected{% endif %}
                 >
-                  {{ code|upper }}
+                  {{ lang_names[code] if code in lang_names else code|upper }}
                 </option>
               {% endfor %}
             </select>
@@ -226,10 +269,13 @@
       </button>
     </main>
 
-    <footer class="bg-[#121212] border-t border-gray-800 pt-12 pb-8">
-      <div class="max-w-7xl mx-auto px-8 text-center">
+    <footer class="bg-[#121212] border-t border-gray-800 pt-12 pb-10">
+      <div
+        class="max-w-7xl mx-auto px-8 flex flex-col items-center text-center"
+      >
+        <!-- 1. Hàng Menu Links -->
         <div
-          class="flex justify-center gap-8 text-xs font-bold text-gray-500 uppercase mb-8"
+          class="flex flex-wrap justify-center gap-6 sm:gap-8 text-xs font-bold text-gray-500 uppercase mb-8"
         >
           <a href="/" class="hover:text-orange-500 transition">Home</a>
           <a href="/random" class="hover:text-orange-500 transition">Random</a>
@@ -238,9 +284,36 @@
           >
           <a href="#" class="hover:text-orange-500 transition">Contact</a>
         </div>
-        <p class="text-[10px] text-gray-600 uppercase tracking-widest">
-          Copyright © <span class="text-orange-500/80">MangaLocal</span>
-        </p>
+
+        <!-- 2. Hàng Phiên bản & Bản quyền (Đã thêm khoảng cách gap-2 để không bị dính) -->
+        <div class="flex flex-col items-center gap-2 mb-8">
+          <p class="text-[11px] text-gray-400 font-semibold tracking-widest">
+            v2026.6.3
+          </p>
+          <p class="text-[11px] text-gray-500 tracking-wide">
+            Copyright ©
+            <span class="text-orange-500/90 font-bold">MangaLocal</span> 2026
+          </p>
+        </div>
+
+        <!-- 3. Hàng Icon Thanh Toán -->
+        <div class="flex justify-center items-center gap-3">
+          <img
+            src="{{ url_for('static', filename='icon/visa.svg') }}"
+            alt="Visa"
+            class="h-7 opacity-75 hover:opacity-100 transition duration-300 cursor-pointer"
+          />
+          <img
+            src="{{ url_for('static', filename='icon/mastercard.svg') }}"
+            alt="Mastercard"
+            class="h-7 opacity-75 hover:opacity-100 transition duration-300 cursor-pointer"
+          />
+          <img
+            src="{{ url_for('static', filename='icon/american.svg') }}"
+            alt="American Express"
+            class="h-7 opacity-75 hover:opacity-100 transition duration-300 cursor-pointer"
+          />
+        </div>
       </div>
     </footer>
 

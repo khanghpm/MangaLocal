@@ -5,55 +5,419 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.tailwindcss.com"></script>
     <title>Support Us - MangaLocal</title>
+    <style>
+      /* Hiệu ứng cuộn cho background */
+      @keyframes scroll-up {
+        0% {
+          transform: translateY(0);
+        }
+        100% {
+          transform: translateY(-50%);
+        }
+      }
+      @keyframes scroll-down {
+        0% {
+          transform: translateY(-50%);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+      .animate-marquee-up {
+        animation: scroll-up 40s linear infinite;
+      }
+      .animate-marquee-down {
+        animation: scroll-down 40s linear infinite;
+      }
+      /* Ẩn thanh cuộn */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        /* scrollbar-width: none; -> Đã comment lại để xóa lỗi vàng compat-api/css */
+      }
+    </style>
   </head>
-  <body class="bg-black text-gray-200 min-h-screen flex flex-col">
+  <body
+    class="bg-black text-gray-200 min-h-screen flex flex-col relative overflow-x-hidden"
+  >
+    <!-- BACKGROUND ANIMATION (Cố định ở lớp dưới cùng) -->
+    <div
+      class="fixed inset-0 w-full h-full bg-black overflow-hidden z-[-1] flex items-center justify-center pointer-events-none"
+    >
+      <!-- Lớp phủ (Overlay) làm tối nền để text và card nổi bật -->
+      <div
+        class="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/95 z-10"
+      ></div>
+
+      <!-- Lớp ảnh trượt chéo -->
+      <div
+        class="absolute inset-0 z-0 flex justify-center gap-4 transform -rotate-12 scale-[1.7] opacity-80 select-none"
+      >
+        <!-- CỘT 1: Cuộn LÊN (Luôn hiện) -->
+        <div class="flex flex-col gap-4 w-40 sm:w-52 animate-marquee-up">
+          <!-- Set 1 -->
+          <img
+            src="{{ url_for('static', filename='img/cover1.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover2.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover3.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover4.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover5.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <!-- Set 2 (Để lặp vô tận) -->
+          <img
+            src="{{ url_for('static', filename='img/cover1.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover2.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover3.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover4.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover5.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+        </div>
+
+        <!-- CỘT 2: Cuộn XUỐNG (Luôn hiện) -->
+        <div class="flex flex-col gap-4 w-40 sm:w-52 animate-marquee-down">
+          <!-- Set 1 -->
+          <img
+            src="{{ url_for('static', filename='img/cover3.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover4.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover5.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover1.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover2.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <!-- Set 2 -->
+          <img
+            src="{{ url_for('static', filename='img/cover3.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover4.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover5.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover1.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover2.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+        </div>
+
+        <!-- CỘT 3: Cuộn LÊN (Chỉ hiện từ màn hình nhỏ - Tablet trở lên) -->
+        <div
+          class="flex flex-col gap-4 w-40 sm:w-52 animate-marquee-up hidden sm:flex"
+        >
+          <!-- Set 1 -->
+          <img
+            src="{{ url_for('static', filename='img/cover5.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover1.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover2.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover3.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover4.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <!-- Set 2 -->
+          <img
+            src="{{ url_for('static', filename='img/cover5.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover1.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover2.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover3.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover4.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+        </div>
+
+        <!-- CỘT 4: Cuộn XUỐNG (Chỉ hiện từ màn hình vừa - md trở lên) -->
+        <div
+          class="flex flex-col gap-4 w-40 sm:w-52 animate-marquee-down hidden md:flex"
+        >
+          <!-- Set 1 -->
+          <img
+            src="{{ url_for('static', filename='img/cover2.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover3.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover4.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover5.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover1.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <!-- Set 2 -->
+          <img
+            src="{{ url_for('static', filename='img/cover2.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover3.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover4.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover5.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover1.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+        </div>
+
+        <!-- CỘT 5: Cuộn LÊN (Chỉ hiện trên màn hình to - lg trở lên) -->
+        <div
+          class="flex flex-col gap-4 w-40 sm:w-52 animate-marquee-up hidden lg:flex"
+        >
+          <!-- Set 1 -->
+          <img
+            src="{{ url_for('static', filename='img/cover4.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover5.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover1.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover2.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover3.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <!-- Set 2 -->
+          <img
+            src="{{ url_for('static', filename='img/cover4.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover5.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover1.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover2.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+          <img
+            src="{{ url_for('static', filename='img/cover3.jpg') }}"
+            alt="Manga Cover"
+            class="rounded-xl shadow-lg object-cover"
+          />
+        </div>
+      </div>
+    </div>
+    <!-- END BACKGROUND ANIMATION -->
+
     {% include 'nav.html' %}
 
-    <main class="flex-grow max-w-6xl mx-auto w-full px-4 py-16 text-center">
-      <h1 class="text-4xl font-bold text-white mb-4">Support MangaLocal</h1>
-      <p class="text-gray-400 max-w-2xl mx-auto mb-12">
+    <!-- NỘI DUNG CHÍNH (Đã được căn giữa) -->
+    <main
+      class="flex-grow max-w-6xl mx-auto w-full px-4 py-16 text-center z-10 flex flex-col justify-center"
+    >
+      <h1 class="text-5xl font-extrabold text-white mb-4 drop-shadow-lg">
+        Support MangaLocal<span class="text-orange-500">+</span>
+      </h1>
+      <p class="text-gray-300 text-lg max-w-2xl mx-auto mb-12 drop-shadow-md">
         Help us keep the servers running and enjoy an ad-free, unlimited reading
         experience.
       </p>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- KHUNG 49K CĂN GIỮA MÀN HÌNH -->
+      <div class="flex justify-center w-full">
+        <!-- Đổi sang max-w-sm và thêm backdrop-blur để làm hiệu ứng kính mờ -->
         <div
-          class="bg-[#121212] border border-gray-800 rounded-xl p-8 hover:border-orange-500 transition"
+          class="w-full max-w-sm bg-black/60 backdrop-blur-md border border-gray-700 rounded-2xl p-8 hover:border-orange-500 transition duration-300 transform hover:scale-105 shadow-2xl"
         >
-          <div class="w-12 h-12 bg-yellow-500 rounded-full mx-auto mb-4"></div>
-          <h3 class="text-xl font-bold text-white">Local Supporter</h3>
-          <p class="text-xs text-gray-500 mt-2 mb-6">
-            Perfect for casual readers
+          <div
+            class="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full mx-auto mb-4 shadow-lg shadow-orange-500/30"
+          ></div>
+          <h3 class="text-2xl font-bold text-white">Local Supporter</h3>
+          <p
+            class="text-xs text-gray-400 mt-2 mb-6 uppercase tracking-widest font-semibold"
+          >
+            Perfect for readers
           </p>
-          <ul class="text-sm text-left space-y-3 mb-8 text-gray-300">
-            <li>✓ Red <b>+</b> Supporter Badge</li>
-            <li>✓ Unlimited Daily Reading</li>
-            <li>✓ Completely Ad-Free</li>
+          <ul
+            class="text-sm text-left space-y-4 mb-8 text-gray-200 font-medium"
+          >
+            <li class="flex items-center">
+              <span class="text-orange-500 mr-2">✓</span> Red <b>+</b> Supporter
+              Badge
+            </li>
+            <li class="flex items-center">
+              <span class="text-orange-500 mr-2">✓</span> Unlimited Daily
+              Reading
+            </li>
+            <li class="flex items-center">
+              <span class="text-orange-500 mr-2">✓</span> Completely Ad-Free
+            </li>
           </ul>
-          <div class="text-3xl font-bold text-white mb-6">
-            49.000₫<span class="text-sm text-gray-500 font-normal">/mo</span>
+          <div class="text-4xl font-extrabold text-white mb-8">
+            49.000₫<span
+              class="text-sm text-gray-400 font-medium tracking-normal"
+              >/mo</span
+            >
           </div>
 
           <button
             type="button"
             onclick="openPaymentModal()"
-            class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-orange-900/20"
+            class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-orange-900/50 uppercase tracking-wide"
           >
             Select Plan
           </button>
         </div>
       </div>
 
+      <!-- MODAL THANH TOÁN -->
       <div
         id="payment-modal-overlay"
-        class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 backdrop-blur-sm"
+        class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 backdrop-blur-md"
       >
         <div
           id="payment-modal-card"
-          class="bg-[#161616] border border-gray-800 rounded-2xl w-full max-w-xl p-8 transform scale-95 transition-transform duration-300 relative shadow-2xl"
+          class="bg-[#161616] border border-gray-800 rounded-2xl w-full max-w-xl p-8 transform scale-95 transition-transform duration-300 relative shadow-2xl text-left"
         >
           <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold text-white">Local Supporter</h2>
+            <h2 class="text-xl font-bold text-white">
+              Checkout: Local Supporter
+            </h2>
             <button
               type="button"
               onclick="closePaymentModal()"
@@ -108,8 +472,8 @@
             <div>
               <label
                 for="sub-name"
-                class="block text-[11px] font-bold text-gray-400 mb-1.5"
-                >Name</label
+                class="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide"
+                >Name on Card</label
               >
               <input
                 type="text"
@@ -123,7 +487,7 @@
               <div>
                 <label
                   for="sub-address"
-                  class="block text-[11px] font-bold text-gray-400 mb-1.5"
+                  class="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide"
                   >Address</label
                 >
                 <input
@@ -136,7 +500,7 @@
               <div>
                 <label
                   for="sub-city"
-                  class="block text-[11px] font-bold text-gray-400 mb-1.5"
+                  class="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide"
                   >Town/City</label
                 >
                 <input
@@ -152,7 +516,7 @@
               <div>
                 <label
                   for="sub-zip"
-                  class="block text-[11px] font-bold text-gray-400 mb-1.5"
+                  class="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide"
                   >Postcode/Zip Code</label
                 >
                 <input
@@ -165,7 +529,7 @@
               <div>
                 <label
                   for="sub-country"
-                  class="block text-[11px] font-bold text-gray-400 mb-1.5"
+                  class="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide"
                   >Country</label
                 >
                 <select
@@ -181,14 +545,14 @@
               </div>
             </div>
 
-            <div class="flex flex-col pt-4">
+            <div class="flex flex-col pt-4 border-t border-gray-800 mt-4">
               <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-bold text-white"
-                  >Subscribing for 49.000₫/month</span
+                <span class="text-sm font-bold text-white"
+                  >Total: 49.000₫/month</span
                 >
                 <button
                   type="submit"
-                  class="bg-[#f06836] hover:bg-[#df5624] text-white font-bold py-2 px-6 rounded-lg text-sm transition"
+                  class="bg-[#f06836] hover:bg-[#df5624] text-white font-bold py-2.5 px-8 rounded-lg text-sm transition shadow-lg shadow-orange-900/30"
                 >
                   Subscribe
                 </button>
@@ -203,7 +567,11 @@
         </div>
       </div>
     </main>
-    <footer class="bg-[#121212] border-t border-gray-800 pt-12 pb-8">
+
+    <!-- FOOTER (Được đẩy xuống dưới cùng) -->
+    <footer
+      class="bg-black/80 backdrop-blur-md border-t border-gray-800 pt-12 pb-8 z-10 mt-auto"
+    >
       <div class="max-w-7xl mx-auto px-8 text-center">
         <div
           class="flex justify-center gap-8 text-xs font-bold text-gray-500 uppercase mb-8"
@@ -213,7 +581,9 @@
           <a href="/privacy" class="hover:text-orange-500 transition"
             >Privacy Policy</a
           >
-          <a href="/privacy" class="hover:text-orange-500 transition">Contact</a>
+          <a href="/privacy" class="hover:text-orange-500 transition"
+            >Contact</a
+          >
         </div>
         <p class="text-[10px] text-gray-600 uppercase tracking-widest">
           Copyright © <span class="text-orange-500/80">MangaLocal</span>

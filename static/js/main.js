@@ -424,3 +424,89 @@ window.closePaymentModal = function () {
   card.classList.add("scale-95")
  }
 }
+
+
+// ============================================================
+//  POPULAR NEW TITLES — Hero Carousel
+//  Dán khối này vào CUỐI main.js. 10 slide, nút ‹ ›, kéo-thả, autoplay.
+// ============================================================
+;(function () {
+  const track = document.getElementById("hero-track");
+  if (!track) return; // chỉ chạy ở trang chủ
+
+  const slides = Array.from(track.querySelectorAll(".hero-slide"));
+  if (!slides.length) return;
+  const bg = document.getElementById("hero-bg");
+  const counter = document.getElementById("hero-counter");
+  const btnPrev = document.getElementById("hero-prev");
+  const btnNext = document.getElementById("hero-next");
+  const total = slides.length;
+  let cur = 0;
+  let timer = null;
+
+  function show(n) {
+    cur = (n + total) % total;
+    slides.forEach((s, i) => s.classList.toggle("hidden", i !== cur));
+    // đổi nền theo bìa của slide hiện tại (ưu tiên ảnh lớn, lỗi thì lùi về ảnh thường)
+    if (bg) {
+      const slide = slides[cur];
+      const big = slide.getAttribute("data-cover");      // .512 (hoặc fallback sẵn từ template)
+      const small = slide.getAttribute("data-cover-sm");  // .256 dự phòng
+      const setBg = (u) => { if (u) bg.style.backgroundImage = `url("${u}")`; };
+      if (big) {
+        const probe = new Image();
+        probe.onload = () => setBg(big);
+        probe.onerror = () => setBg(small || big); // .512 lỗi -> dùng .256
+        probe.src = big;
+        // set tạm ngay (tránh nền trống trong lúc probe) bằng ảnh nhỏ nếu có
+        setBg(small || big);
+      } else {
+        setBg(small);
+      }
+    }
+    // bộ đếm: NO.10 -> NO.1 (giống MangaDex: slide đầu là NO. total)
+    if (counter) counter.textContent = "NO. " + (total - cur);
+  }
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  // ---- nút điều hướng ----
+  if (btnNext) btnNext.addEventListener("click", (e) => { e.preventDefault(); next(); resetAuto(); });
+  if (btnPrev) btnPrev.addEventListener("click", (e) => { e.preventDefault(); prev(); resetAuto(); });
+
+  // ---- tự động chạy slide ----
+  function startAuto() { timer = setInterval(next, 6000); }
+  function stopAuto() { if (timer) { clearInterval(timer); timer = null; } }
+  function resetAuto() { stopAuto(); startAuto(); }
+  track.addEventListener("mouseenter", stopAuto);
+  track.addEventListener("mouseleave", startAuto);
+
+  // ---- kéo-thả chuột trái để chuyển slide ----
+  let dragging = false, startX = 0, moved = 0;
+  track.addEventListener("mousedown", (e) => {
+    if (e.button !== 0) return;
+    // bỏ qua nếu bấm trúng nút điều hướng
+    if (e.target.closest("#hero-prev, #hero-next")) return;
+    dragging = true; startX = e.clientX; moved = 0;
+    stopAuto();
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    moved = e.clientX - startX;
+  });
+  window.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    const TH = 60; // ngưỡng kéo (px)
+    if (moved <= -TH) next();       // kéo sang trái -> slide kế
+    else if (moved >= TH) prev();   // kéo sang phải -> slide trước
+    startAuto();
+  });
+
+  // chống kéo ảnh mặc định của trình duyệt
+  track.querySelectorAll("img").forEach((img) => (img.draggable = false));
+
+  // ---- khởi tạo ----
+  show(0);
+  startAuto();
+})();

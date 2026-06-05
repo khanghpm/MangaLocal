@@ -276,7 +276,7 @@ def index():
         # 1. Fetch "Hot Updates"
         params = {
             "limit": 20, 
-            "includes[]": ["cover_art"],
+            "includes[]": ["cover_art", "author"],
             "contentRating[]": ["safe", "suggestive"] 
         }
         resp = fetch_manga_list(params)
@@ -290,13 +290,30 @@ def index():
             cover_file = next((r['attributes']['fileName'] for r in m.get('relationships', []) 
                              if r['type'] == 'cover_art' and 'attributes' in r), None)
             cover = f"https://uploads.mangadex.org/covers/{m['id']}/{cover_file}.256.jpg" if cover_file else ""
+            cover_lg = f"https://uploads.mangadex.org/covers/{m['id']}/{cover_file}.512.jpg" if cover_file else ""
+
+            # Mô tả (ưu tiên tiếng Anh) - dùng cho hero carousel
+            desc_attr = attrs.get('description', {})
+            description = desc_attr.get('en') or next(iter(desc_attr.values()), "") if isinstance(desc_attr, dict) else ""
+
+            # Thể loại (tối đa 3) - dùng cho hero carousel
+            tags = [t['attributes']['name'].get('en', '') for t in attrs.get('tags', []) if t.get('attributes', {}).get('name')]
+            tags = [t for t in tags if t][:3]
+
+            # Tác giả - dùng cho hero carousel
+            author_name = next((r['attributes'].get('name', '') for r in m.get('relationships', [])
+                               if r['type'] == 'author' and 'attributes' in r), "")
 
             manga_data.append({
                 "id": m['id'], 
                 "title": title, 
                 "cover": cover,
+                "cover_lg": cover_lg,
                 "status": attrs.get('status', '').capitalize(),
-                "type": "Manga" if attrs.get('originalLanguage') == 'ja' else "Manhwa/Manhua"
+                "type": "Manga" if attrs.get('originalLanguage') == 'ja' else "Manhwa/Manhua",
+                "description": description,
+                "tags": tags,
+                "author": author_name
             })
     except APIError as e:
         flash(f"Failed to load hot updates: {e}", "warning")

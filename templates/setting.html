@@ -209,10 +209,13 @@
       </div>
     </main>
 
-    <footer class="bg-[#121212] border-t border-gray-800 pt-12 pb-8">
-      <div class="max-w-7xl mx-auto px-8 text-center">
+    <footer class="bg-[#121212] border-t border-gray-800 pt-12 pb-10">
+      <div
+        class="max-w-7xl mx-auto px-8 flex flex-col items-center text-center"
+      >
+        <!-- 1. Hàng Menu Links -->
         <div
-          class="flex justify-center gap-8 text-xs font-bold text-gray-500 uppercase mb-8"
+          class="flex flex-wrap justify-center gap-6 sm:gap-8 text-xs font-bold text-gray-500 uppercase mb-8"
         >
           <a href="/" class="hover:text-orange-500 transition">Home</a>
           <a href="/random" class="hover:text-orange-500 transition">Random</a>
@@ -221,9 +224,36 @@
           >
           <a href="#" class="hover:text-orange-500 transition">Contact</a>
         </div>
-        <p class="text-[10px] text-gray-600 uppercase tracking-widest">
-          Copyright © <span class="text-orange-500/80">MangaLocal</span>
-        </p>
+
+        <!-- 2. Hàng Phiên bản & Bản quyền (Đã thêm khoảng cách gap-2 để không bị dính) -->
+        <div class="flex flex-col items-center gap-2 mb-8">
+          <p class="text-[11px] text-gray-400 font-semibold tracking-widest">
+            v2026.6.3
+          </p>
+          <p class="text-[11px] text-gray-500 tracking-wide">
+            Copyright ©
+            <span class="text-orange-500/90 font-bold">MangaLocal</span> 2026
+          </p>
+        </div>
+
+        <!-- 3. Hàng Icon Thanh Toán -->
+        <div class="flex justify-center items-center gap-3">
+          <img
+            src="{{ url_for('static', filename='icon/visa.svg') }}"
+            alt="Visa"
+            class="h-7 opacity-75 hover:opacity-100 transition duration-300 cursor-pointer"
+          />
+          <img
+            src="{{ url_for('static', filename='icon/mastercard.svg') }}"
+            alt="Mastercard"
+            class="h-7 opacity-75 hover:opacity-100 transition duration-300 cursor-pointer"
+          />
+          <img
+            src="{{ url_for('static', filename='icon/american.svg') }}"
+            alt="American Express"
+            class="h-7 opacity-75 hover:opacity-100 transition duration-300 cursor-pointer"
+          />
+        </div>
       </div>
     </footer>
     {% include 'auth_modal.html' %}
