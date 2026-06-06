@@ -8,13 +8,24 @@
     <title>MangaLocal - Home</title>
   </head>
 
-  <body class="bg-black text-gray-200 min-h-screen flex flex-col">
+  <body class="bg-black text-gray-200 min-h-screen flex flex-col nav-transparent">
+    <style>
+      /* Trang chủ: nav trong suốt khi ở đỉnh để lộ ảnh nền carousel xuyên qua;
+         cuộn xuống thì nav có nền đặc lại cho dễ đọc. (Chỉ áp dụng ở index.html) */
+      body.nav-transparent nav {
+        background-color: transparent !important;
+        border-bottom-color: transparent !important;
+        transition: background-color .35s ease, border-color .35s ease;
+      }
+      nav { transition: background-color .35s ease, border-color .35s ease; }
+    </style>
     {% include 'nav.html' %}
     {% with messages = get_flashed_messages() %}{% if messages %}
-      <div id="flash-container" class="max-w-7xl mx-auto px-8 mt-4">
+      <div id="flash-container"
+        class="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 flex flex-col gap-2 items-center pointer-events-none">
         {% for message in messages %}
           <div
-            class="flash-alert bg-orange-500/10 border border-orange-500/50 text-orange-500 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-opacity duration-1000"
+            class="flash-alert w-full text-center bg-[#1a1a1a]/90 backdrop-blur-md border border-orange-500/50 text-orange-400 px-4 py-3 rounded-lg text-xs font-bold uppercase tracking-wider shadow-2xl transition-opacity duration-1000 pointer-events-auto"
           >
             {{ message }}
           </div>

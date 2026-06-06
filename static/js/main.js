@@ -739,3 +739,25 @@ window.closePaymentModal = function () {
   applyHeader();
   syncButtons();
 })();
+
+
+// ============================================================
+//  NAV TRONG SUỐT Ở TRANG CHỦ (lộ ảnh nền carousel xuyên qua header)
+//  Chỉ chạy khi có carousel (#popular-hero) -> không ảnh hưởng trang khác.
+//  Ở đỉnh trang: nav trong suốt. Cuộn xuống quá ngưỡng: nav có nền đặc lại.
+// ============================================================
+;(function () {
+  const hero = document.getElementById("popular-hero");
+  if (!hero) return; // trang khác không có carousel -> bỏ qua, nav giữ nền mặc định
+
+  const THRESHOLD = 180; // px cuộn trước khi nav chuyển sang nền đặc
+  function onScroll() {
+    if (window.scrollY < THRESHOLD) {
+      document.body.classList.add("nav-transparent");
+    } else {
+      document.body.classList.remove("nav-transparent");
+    }
+  }
+  onScroll(); // set trạng thái ban đầu
+  window.addEventListener("scroll", onScroll, { passive: true });
+})();
