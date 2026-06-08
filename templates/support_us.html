@@ -395,13 +395,25 @@
             >
           </div>
 
-          <button
-            type="button"
-            onclick="openPaymentModal()"
-            class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-orange-900/50 uppercase tracking-wide"
-          >
-            Select Plan
-          </button>
+          <div class="mt-8">
+            {% if current_user.is_authenticated and current_user.is_supporter %}
+              <button
+                type="button"
+                class="w-full bg-[#1e1e1e] text-orange-500/50 border border-orange-500/30 font-bold py-3 rounded-lg text-sm transition cursor-not-allowed shadow-none"
+                disabled
+              >
+                Subscribed
+              </button>
+            {% else %}
+              <button
+                type="button"
+                class="w-full bg-[#f06836] hover:bg-[#df5624] text-white font-bold py-3 rounded-lg text-sm transition shadow-lg shadow-orange-900/30"
+                onclick="openPaymentModal()"
+              >
+                Select Plan
+              </button>
+            {% endif %}
+          </div>
         </div>
       </div>
 
