@@ -172,7 +172,7 @@ def login():
         
         # 4. Login user
         login_user(user)
-        flash(f'Welcome back, {user.email}!', 'success')
+        flash(f'Welcome back, {current_user.username}!', 'success')
         return redirect(url_for('index'))
     
     except Exception as e:

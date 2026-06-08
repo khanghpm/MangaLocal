@@ -425,92 +425,216 @@ window.closePaymentModal = function () {
  }
 }
 
-
 // ============================================================
-//  POPULAR NEW TITLES — Hero Carousel
-//  Dán khối này vào CUỐI main.js. 10 slide, nút ‹ ›, kéo-thả, autoplay.
+//  POPULAR NEW TITLES — Hero Carousel (sliding, drag-follow, infinite)
+//  Trượt ngang mượt: giữ chuột trái kéo theo con trỏ, thả ra nếu chưa
+//  đủ ngưỡng thì trượt về chỗ cũ, đủ ngưỡng thì sang slide kế. Tự chạy.
 // ============================================================
 ;(function () {
-  const track = document.getElementById("hero-track");
-  if (!track) return; // chỉ chạy ở trang chủ
+ const viewport = document.getElementById("hero-viewport")
+ const track = document.getElementById("hero-track")
+ if (!viewport || !track) return
+ const slides = Array.from(track.querySelectorAll(".hero-slide"))
+ const N = slides.length
+ if (!N) return
 
-  const slides = Array.from(track.querySelectorAll(".hero-slide"));
-  if (!slides.length) return;
-  const bg = document.getElementById("hero-bg");
-  const counter = document.getElementById("hero-counter");
-  const btnPrev = document.getElementById("hero-prev");
-  const btnNext = document.getElementById("hero-next");
-  const total = slides.length;
-  let cur = 0;
-  let timer = null;
+ const bgA = document.getElementById("hero-bg")
+ const bgB = document.getElementById("hero-bg2")
+ const counter = document.getElementById("hero-counter")
+ const btnPrev = document.getElementById("hero-prev")
+ const btnNext = document.getElementById("hero-next")
 
-  function show(n) {
-    cur = (n + total) % total;
-    slides.forEach((s, i) => s.classList.toggle("hidden", i !== cur));
-    // đổi nền theo bìa của slide hiện tại (ưu tiên ảnh lớn, lỗi thì lùi về ảnh thường)
-    if (bg) {
-      const slide = slides[cur];
-      const big = slide.getAttribute("data-cover");      // .512 (hoặc fallback sẵn từ template)
-      const small = slide.getAttribute("data-cover-sm");  // .256 dự phòng
-      const setBg = (u) => { if (u) bg.style.backgroundImage = `url("${u}")`; };
-      if (big) {
-        const probe = new Image();
-        probe.onload = () => setBg(big);
-        probe.onerror = () => setBg(small || big); // .512 lỗi -> dùng .256
-        probe.src = big;
-        // set tạm ngay (tránh nền trống trong lúc probe) bằng ảnh nhỏ nếu có
-        setBg(small || big);
-      } else {
-        setBg(small);
-      }
-    }
-    // bộ đếm: NO.10 -> NO.1 (giống MangaDex: slide đầu là NO. total)
-    if (counter) counter.textContent = "NO. " + (total - cur);
+ // --- Nhân bản 2 đầu để cuộn vòng vô hạn ---
+ const firstClone = slides[0].cloneNode(true)
+ const lastClone = slides[N - 1].cloneNode(true)
+ track.appendChild(firstClone)
+ track.insertBefore(lastClone, slides[0])
+ // Track mở rộng: [lastClone, S0..S(N-1), firstClone] -> slide thật ở vị trí 1..N
+
+ let pos = 1 // vị trí hiện tại trên track mở rộng
+ let useA = true // lớp nền nào đang hiện
+ const EASE = "transform .5s cubic-bezier(.22,.61,.36,1)"
+
+ function W() {
+  return viewport.clientWidth
+ }
+ function setX(px, anim) {
+  track.style.transition = anim ? EASE : "none"
+  track.style.transform = "translateX(" + px + "px)"
+ }
+ function settle(anim) {
+  setX(-pos * W(), anim)
+ }
+
+ function realIndex() {
+  if (pos === 0) return N - 1
+  if (pos === N + 1) return 0
+  return pos - 1
+ }
+
+ function updateMeta(instant) {
+  const ri = realIndex()
+  if (counter) counter.textContent = "NO. " + (ri + 1)
+  const slide = slides[ri]
+  const big = slide.getAttribute("data-cover")
+  const small = slide.getAttribute("data-cover-sm")
+  const incoming = useA ? bgB : bgA
+  const outgoing = useA ? bgA : bgB
+  const apply = (u) => {
+   if (!u) return
+   incoming.style.backgroundImage = 'url("' + u + '")'
+   if (instant) {
+    incoming.style.transition = "none"
+   } else {
+    incoming.style.transition = "opacity .6s ease"
+    outgoing.style.transition = "opacity .6s ease"
+   }
+   incoming.style.opacity = "0.95"
+   outgoing.style.opacity = "0"
+   useA = !useA
   }
-  function next() { show(cur + 1); }
-  function prev() { show(cur - 1); }
+  if (big) {
+   const probe = new Image()
+   probe.onload = () => apply(big)
+   probe.onerror = () => apply(small || big)
+   probe.src = big
+  } else {
+   apply(small)
+  }
+ }
 
-  // ---- nút điều hướng ----
-  if (btnNext) btnNext.addEventListener("click", (e) => { e.preventDefault(); next(); resetAuto(); });
-  if (btnPrev) btnPrev.addEventListener("click", (e) => { e.preventDefault(); prev(); resetAuto(); });
+ function go(delta, anim) {
+  pos += delta
+  settle(anim !== false)
+  updateMeta(false)
+ }
 
-  // ---- tự động chạy slide ----
-  function startAuto() { timer = setInterval(next, 6000); }
-  function stopAuto() { if (timer) { clearInterval(timer); timer = null; } }
-  function resetAuto() { stopAuto(); startAuto(); }
-  track.addEventListener("mouseenter", stopAuto);
-  track.addEventListener("mouseleave", startAuto);
+ // Nhảy không hiệu ứng khi chạm slide nhân bản (tạo vòng lặp liền mạch)
+ track.addEventListener("transitionend", () => {
+  if (pos === 0) {
+   pos = N
+   settle(false)
+  } else if (pos === N + 1) {
+   pos = 1
+   settle(false)
+  }
+ })
 
-  // ---- kéo-thả chuột trái để chuyển slide ----
-  let dragging = false, startX = 0, moved = 0;
-  track.addEventListener("mousedown", (e) => {
-    if (e.button !== 0) return;
-    // bỏ qua nếu bấm trúng nút điều hướng
-    if (e.target.closest("#hero-prev, #hero-next")) return;
-    dragging = true; startX = e.clientX; moved = 0;
-    stopAuto();
-  });
-  window.addEventListener("mousemove", (e) => {
-    if (!dragging) return;
-    moved = e.clientX - startX;
-  });
-  window.addEventListener("mouseup", () => {
-    if (!dragging) return;
-    dragging = false;
-    const TH = 60; // ngưỡng kéo (px)
-    if (moved <= -TH) next();       // kéo sang trái -> slide kế
-    else if (moved >= TH) prev();   // kéo sang phải -> slide trước
-    startAuto();
-  });
+ // --- Khởi tạo ---
+ // Preload ảnh nền slide đầu (cover_lg lớn) RỒI mới fade-in,
+ // tránh hiện 1 nhịp nền trắng trong lúc trình duyệt đang tải ảnh.
+ ;(function initBg() {
+  if (!bgA) return
+  bgA.style.opacity = "0"
+  if (bgB) bgB.style.opacity = "0"
 
-  // chống kéo ảnh mặc định của trình duyệt
-  track.querySelectorAll("img").forEach((img) => (img.draggable = false));
+  const slide = slides[0]
+  const big = slide.getAttribute("data-cover")
+  const small = slide.getAttribute("data-cover-sm")
 
-  // ---- khởi tạo ----
-  show(0);
-  startAuto();
-})();
+  const show = (url) => {
+   if (!url) return
+   bgA.style.backgroundImage = 'url("' + url + '")'
+   // chờ trình duyệt apply background-image rồi mới fade lên,
+   // để không thấy khung rỗng trong lúc đang vẽ.
+   requestAnimationFrame(() => {
+    bgA.style.transition = "opacity .35s ease"
+    bgA.style.opacity = "0.95"
+   })
+  }
 
+  if (big) {
+   const probe = new Image()
+   probe.onload = () => show(big)
+   probe.onerror = () => show(small || big)
+   probe.src = big
+  } else if (small) {
+   const probe = new Image()
+   probe.onload = () => show(small)
+   probe.onerror = () => show(small)
+   probe.src = small
+  }
+ })()
+ settle(false)
+ if (counter) counter.textContent = "NO. 1"
+
+ // --- Nút điều hướng ---
+ if (btnNext)
+  btnNext.addEventListener("click", (e) => {
+   e.preventDefault()
+   go(1)
+   resetAuto()
+  })
+ if (btnPrev)
+  btnPrev.addEventListener("click", (e) => {
+   e.preventDefault()
+   go(-1)
+   resetAuto()
+  })
+
+ // --- Tự động chạy ---
+ let timer = null
+ function startAuto() {
+  timer = setInterval(() => go(1), 6000)
+ }
+ function stopAuto() {
+  if (timer) {
+   clearInterval(timer)
+   timer = null
+  }
+ }
+ function resetAuto() {
+  stopAuto()
+  startAuto()
+ }
+ viewport.addEventListener("mouseenter", stopAuto)
+ viewport.addEventListener("mouseleave", startAuto)
+
+ // --- Kéo-thả theo con trỏ ---
+ let dragging = false,
+  startX = 0,
+  dx = 0
+ viewport.addEventListener("mousedown", (e) => {
+  if (e.button !== 0) return
+  if (e.target.closest("#hero-prev, #hero-next")) return // để nút bấm hoạt động
+  dragging = true
+  startX = e.clientX
+  dx = 0
+  stopAuto()
+  setX(-pos * W(), false)
+  e.preventDefault()
+ })
+ window.addEventListener("mousemove", (e) => {
+  if (!dragging) return
+  dx = e.clientX - startX
+  // nhẹ tay ở hai đầu (đỡ giật) — vẫn cho kéo vì có clone
+  setX(-pos * W() + dx, false)
+ })
+ window.addEventListener("mouseup", () => {
+  if (!dragging) return
+  dragging = false
+  const TH = Math.min(120, W() * 0.15)
+  if (dx <= -TH) go(1)
+  else if (dx >= TH) go(-1)
+  else settle(true) // chưa đủ ngưỡng -> trượt về chỗ cũ
+  startAuto()
+ })
+
+ // Chặn click điều hướng link khi vừa kéo (tránh bấm nhầm vào truyện)
+ viewport.addEventListener(
+  "click",
+  (e) => {
+   if (Math.abs(dx) > 6) {
+    e.preventDefault()
+    e.stopPropagation()
+   }
+  },
+  true,
+ )
+
+ // Tính lại khi đổi kích thước cửa sổ
+ window.addEventListener("resize", () => settle(false))
+})()
 
 // ============================================================
 //  READER SETTINGS — dán khối này vào CUỐI main.js
@@ -518,228 +642,256 @@ window.closePaymentModal = function () {
 //  header visibility, progress bar position. Lưu bằng localStorage.
 // ============================================================
 ;(function () {
-  const container = document.getElementById("reader-image-container");
-  if (!container) return; // chỉ chạy trên trang reader
+ const container = document.getElementById("reader-image-container")
+ if (!container) return // chỉ chạy trên trang reader
 
-  const KEY = "mangalocal_reader_prefs";
-  const defaults = {
-    display: "long",     // single | double | long | wide
-    dir: "ltr",          // ltr | rtl
-    header: "shown",     // shown | hidden
-    progress: "bottom",  // hidden | bottom | left | right
-  };
-  let prefs = Object.assign({}, defaults);
+ const KEY = "mangalocal_reader_prefs"
+ const defaults = {
+  display: "long", // single | double | long | wide
+  dir: "ltr", // ltr | rtl
+  header: "shown", // shown | hidden
+  progress: "bottom", // hidden | bottom | left | right
+ }
+ let prefs = Object.assign({}, defaults)
+ try {
+  const saved = JSON.parse(localStorage.getItem(KEY))
+  if (saved) prefs = Object.assign(prefs, saved)
+ } catch (e) {}
+
+ const images = Array.from(container.querySelectorAll("img"))
+ let pageIndex = 0 // trang hiện tại cho single/double
+
+ function savePrefs() {
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY));
-    if (saved) prefs = Object.assign(prefs, saved);
+   localStorage.setItem(KEY, JSON.stringify(prefs))
   } catch (e) {}
+ }
 
-  const images = Array.from(container.querySelectorAll("img"));
-  let pageIndex = 0; // trang hiện tại cho single/double
+ // ---------- Áp dụng chế độ hiển thị ----------
+ function applyDisplay() {
+  container.classList.remove("mode-wide", "mode-paged", "dir-rtl")
+  images.forEach((img) => {
+   img.classList.remove("page-visible")
+   img.style.display = ""
+  })
 
-  function savePrefs() {
-    try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch (e) {}
+  // Ẩn khối "hết chương / quảng cáo" khi ở single/double/wide để không vướng thao tác click lật trang
+  const extras = document.querySelectorAll("[data-reader-extra]")
+  const isPagedOrWide = prefs.display === "single" || prefs.display === "double" || prefs.display === "wide"
+  extras.forEach((el) => {
+   el.style.display = isPagedOrWide ? "none" : ""
+  })
+
+  if (prefs.display === "long") {
+   // cuộn dọc — hiện tất cả ảnh (mặc định)
+   images.forEach((img) => (img.style.display = "block"))
+  } else if (prefs.display === "wide") {
+   images.forEach((img) => (img.style.display = "block"))
+   container.classList.add("mode-wide")
+   if (prefs.dir === "rtl") container.classList.add("dir-rtl")
+  } else {
+   // single hoặc double: ẩn hết, chỉ hiện trang hiện tại
+   container.classList.add("mode-paged")
+   if (prefs.dir === "rtl") container.classList.add("dir-rtl")
+   showPages()
   }
+  updateProgress()
+ }
 
-  // ---------- Áp dụng chế độ hiển thị ----------
-  function applyDisplay() {
-    container.classList.remove("mode-wide", "mode-paged", "dir-rtl");
-    images.forEach((img) => { img.classList.remove("page-visible"); img.style.display = ""; });
+ function showPages() {
+  images.forEach((img) => img.classList.remove("page-visible"))
+  if (prefs.display === "single") {
+   if (images[pageIndex]) images[pageIndex].classList.add("page-visible")
+  } else if (prefs.display === "double") {
+   let a = pageIndex,
+    b = pageIndex + 1
+   const order = prefs.dir === "rtl" ? [b, a] : [a, b]
+   order.forEach((i) => {
+    if (images[i]) images[i].classList.add("page-visible")
+   })
+  }
+ }
 
-    // Ẩn khối "hết chương / quảng cáo" khi ở single/double/wide để không vướng thao tác click lật trang
-    const extras = document.querySelectorAll("[data-reader-extra]");
-    const isPagedOrWide = (prefs.display === "single" || prefs.display === "double" || prefs.display === "wide");
-    extras.forEach((el) => { el.style.display = isPagedOrWide ? "none" : ""; });
+ function maxIndex() {
+  return prefs.display === "double" ? Math.max(0, images.length - 2) : Math.max(0, images.length - 1)
+ }
+ function step() {
+  return prefs.display === "double" ? 2 : 1
+ }
 
-    if (prefs.display === "long") {
-      // cuộn dọc — hiện tất cả ảnh (mặc định)
-      images.forEach((img) => (img.style.display = "block"));
-    } else if (prefs.display === "wide") {
-      images.forEach((img) => (img.style.display = "block"));
-      container.classList.add("mode-wide");
-      if (prefs.dir === "rtl") container.classList.add("dir-rtl");
-    } else {
-      // single hoặc double: ẩn hết, chỉ hiện trang hiện tại
-      container.classList.add("mode-paged");
-      if (prefs.dir === "rtl") container.classList.add("dir-rtl");
-      showPages();
+ function nextPage() {
+  pageIndex = Math.min(pageIndex + step(), maxIndex())
+  showPages()
+  updateProgress()
+  window.scrollTo({ top: 0 })
+ }
+ function prevPage() {
+  pageIndex = Math.max(pageIndex - step(), 0)
+  showPages()
+  updateProgress()
+  window.scrollTo({ top: 0 })
+ }
+
+ // ---------- Click trái/phải cho single & double ----------
+ container.addEventListener("click", (e) => {
+  if (prefs.display !== "single" && prefs.display !== "double") return
+  const x = e.clientX
+  const leftSide = x < window.innerWidth / 2
+  // ltr: trái=lùi, phải=tiếp ; rtl: ngược lại
+  if (prefs.dir === "ltr") {
+   leftSide ? prevPage() : nextPage()
+  } else {
+   leftSide ? nextPage() : prevPage()
+  }
+ })
+
+ // ---------- Wide strip: giữ chuột trái ở mép để cuộn ngang (không quá nhanh) ----------
+ let wideHold = null
+ container.addEventListener("mousedown", (e) => {
+  if (prefs.display !== "wide" || e.button !== 0) return
+  const leftSide = e.clientX < window.innerWidth / 2
+  // ltr: phải=tiếp(cuộn xuôi), trái=lùi ; rtl thì đảo
+  let forward = prefs.dir === "ltr" ? !leftSide : leftSide
+  const dirSign = forward ? 1 : -1
+  // tốc độ vừa phải: 8px mỗi ~16ms
+  wideHold = setInterval(() => {
+   container.scrollLeft += dirSign * 8
+   updateProgress()
+  }, 16)
+ })
+ function stopWide() {
+  if (wideHold) {
+   clearInterval(wideHold)
+   wideHold = null
+  }
+ }
+ container.addEventListener("mouseup", stopWide)
+ container.addEventListener("mouseleave", stopWide)
+
+ // ---------- Progress bar ----------
+ const wrap = document.getElementById("reader-progress-wrap")
+ const bar = document.getElementById("reader-progress-bar")
+ function applyProgressPos() {
+  if (!wrap) return
+  wrap.setAttribute("data-pos", prefs.progress)
+ }
+ function updateProgress() {
+  if (!wrap || !bar || prefs.progress === "hidden") return
+  let pct = 0
+  if (prefs.display === "long") {
+   const h = document.documentElement.scrollHeight - window.innerHeight
+   pct = h > 0 ? (window.scrollY / h) * 100 : 0
+  } else if (prefs.display === "wide") {
+   const w = container.scrollWidth - container.clientWidth
+   pct = w > 0 ? (Math.abs(container.scrollLeft) / w) * 100 : 0
+  } else {
+   pct = maxIndex() > 0 ? (pageIndex / maxIndex()) * 100 : 100
+  }
+  pct = Math.max(0, Math.min(100, pct))
+  if (prefs.progress === "bottom") bar.style.width = pct + "%"
+  else bar.style.height = pct + "%"
+ }
+ window.addEventListener("scroll", updateProgress)
+
+ // ---------- Header visibility ----------
+ function applyHeader() {
+  const hide = prefs.header === "hidden"
+  document.querySelectorAll("[data-reader-header]").forEach((el) => {
+   el.style.display = hide ? "none" : ""
+  })
+  // Khi header bị ẩn, hiện một nút bánh răng nổi để vẫn mở lại được Reader Settings
+  let fab = document.getElementById("reader-fab-settings")
+  if (hide) {
+   if (!fab) {
+    fab = document.createElement("button")
+    fab.id = "reader-fab-settings"
+    fab.type = "button"
+    fab.title = "Reader Settings"
+    fab.setAttribute("aria-label", "Reader Settings")
+    fab.onclick = function () {
+     window.openReaderSettings()
     }
-    updateProgress();
+    fab.style.cssText = "position:fixed;top:12px;right:12px;z-index:55;padding:10px;border-radius:9999px;" + "background:rgba(30,30,30,.85);color:#f97316;border:1px solid #3a3a3a;cursor:pointer;" + "box-shadow:0 4px 14px rgba(0,0,0,.4);backdrop-filter:blur(4px);transition:opacity .2s;"
+    fab.innerHTML =
+     '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>' +
+     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>'
+    document.body.appendChild(fab)
+   }
+   fab.style.display = "block"
+  } else if (fab) {
+   fab.style.display = "none"
   }
+ }
 
-  function showPages() {
-    images.forEach((img) => img.classList.remove("page-visible"));
-    if (prefs.display === "single") {
-      if (images[pageIndex]) images[pageIndex].classList.add("page-visible");
-    } else if (prefs.display === "double") {
-      let a = pageIndex, b = pageIndex + 1;
-      const order = prefs.dir === "rtl" ? [b, a] : [a, b];
-      order.forEach((i) => { if (images[i]) images[i].classList.add("page-visible"); });
-    }
+ // ---------- Cập nhật trạng thái nút trong popup ----------
+ function syncButtons() {
+  const map = [
+   [".rs-display", prefs.display],
+   [".rs-dir", prefs.dir],
+   [".rs-header", prefs.header],
+   [".rs-progress", prefs.progress],
+  ]
+  map.forEach(([sel, val]) => {
+   document.querySelectorAll(sel).forEach((b) => {
+    b.classList.toggle("rs-active", b.getAttribute("data-val") === val)
+   })
+  })
+ }
+
+ // ---------- Gắn sự kiện cho các nút popup ----------
+ function bindGroup(sel, field, after) {
+  document.querySelectorAll(sel).forEach((btn) => {
+   btn.addEventListener("click", () => {
+    prefs[field] = btn.getAttribute("data-val")
+    if (field === "display") pageIndex = 0
+    savePrefs()
+    syncButtons()
+    if (after) after()
+   })
+  })
+ }
+ bindGroup(".rs-display", "display", applyDisplay)
+ bindGroup(".rs-dir", "dir", applyDisplay)
+ bindGroup(".rs-header", "header", applyHeader)
+ bindGroup(".rs-progress", "progress", () => {
+  applyProgressPos()
+  updateProgress()
+ })
+
+ // ---------- Mở / đóng popup (fade in/out) ----------
+ window.openReaderSettings = function () {
+  const ov = document.getElementById("reader-settings-overlay")
+  const card = document.getElementById("reader-settings-card")
+  if (!ov) return
+  syncButtons()
+  ov.classList.remove("opacity-0", "pointer-events-none")
+  ov.classList.add("opacity-100")
+  if (card) {
+   card.classList.remove("scale-95")
+   card.classList.add("scale-100")
   }
-
-  function maxIndex() {
-    return prefs.display === "double"
-      ? Math.max(0, images.length - 2)
-      : Math.max(0, images.length - 1);
+  document.body.style.overflow = "hidden"
+ }
+ window.closeReaderSettings = function () {
+  const ov = document.getElementById("reader-settings-overlay")
+  const card = document.getElementById("reader-settings-card")
+  if (!ov) return
+  ov.classList.add("opacity-0", "pointer-events-none")
+  ov.classList.remove("opacity-100")
+  if (card) {
+   card.classList.add("scale-95")
+   card.classList.remove("scale-100")
   }
-  function step() { return prefs.display === "double" ? 2 : 1; }
+  document.body.style.overflow = ""
+ }
 
-  function nextPage() {
-    pageIndex = Math.min(pageIndex + step(), maxIndex());
-    showPages(); updateProgress();
-    window.scrollTo({ top: 0 });
-  }
-  function prevPage() {
-    pageIndex = Math.max(pageIndex - step(), 0);
-    showPages(); updateProgress();
-    window.scrollTo({ top: 0 });
-  }
-
-  // ---------- Click trái/phải cho single & double ----------
-  container.addEventListener("click", (e) => {
-    if (prefs.display !== "single" && prefs.display !== "double") return;
-    const x = e.clientX;
-    const leftSide = x < window.innerWidth / 2;
-    // ltr: trái=lùi, phải=tiếp ; rtl: ngược lại
-    if (prefs.dir === "ltr") { leftSide ? prevPage() : nextPage(); }
-    else { leftSide ? nextPage() : prevPage(); }
-  });
-
-  // ---------- Wide strip: giữ chuột trái ở mép để cuộn ngang (không quá nhanh) ----------
-  let wideHold = null;
-  container.addEventListener("mousedown", (e) => {
-    if (prefs.display !== "wide" || e.button !== 0) return;
-    const leftSide = e.clientX < window.innerWidth / 2;
-    // ltr: phải=tiếp(cuộn xuôi), trái=lùi ; rtl thì đảo
-    let forward = prefs.dir === "ltr" ? !leftSide : leftSide;
-    const dirSign = forward ? 1 : -1;
-    // tốc độ vừa phải: 8px mỗi ~16ms
-    wideHold = setInterval(() => {
-      container.scrollLeft += dirSign * 8;
-      updateProgress();
-    }, 16);
-  });
-  function stopWide() { if (wideHold) { clearInterval(wideHold); wideHold = null; } }
-  container.addEventListener("mouseup", stopWide);
-  container.addEventListener("mouseleave", stopWide);
-
-  // ---------- Progress bar ----------
-  const wrap = document.getElementById("reader-progress-wrap");
-  const bar = document.getElementById("reader-progress-bar");
-  function applyProgressPos() {
-    if (!wrap) return;
-    wrap.setAttribute("data-pos", prefs.progress);
-  }
-  function updateProgress() {
-    if (!wrap || !bar || prefs.progress === "hidden") return;
-    let pct = 0;
-    if (prefs.display === "long") {
-      const h = document.documentElement.scrollHeight - window.innerHeight;
-      pct = h > 0 ? (window.scrollY / h) * 100 : 0;
-    } else if (prefs.display === "wide") {
-      const w = container.scrollWidth - container.clientWidth;
-      pct = w > 0 ? (Math.abs(container.scrollLeft) / w) * 100 : 0;
-    } else {
-      pct = (maxIndex() > 0 ? (pageIndex / maxIndex()) * 100 : 100);
-    }
-    pct = Math.max(0, Math.min(100, pct));
-    if (prefs.progress === "bottom") bar.style.width = pct + "%";
-    else bar.style.height = pct + "%";
-  }
-  window.addEventListener("scroll", updateProgress);
-
-  // ---------- Header visibility ----------
-  function applyHeader() {
-    const hide = prefs.header === "hidden";
-    document.querySelectorAll('[data-reader-header]').forEach((el) => {
-      el.style.display = hide ? "none" : "";
-    });
-    // Khi header bị ẩn, hiện một nút bánh răng nổi để vẫn mở lại được Reader Settings
-    let fab = document.getElementById("reader-fab-settings");
-    if (hide) {
-      if (!fab) {
-        fab = document.createElement("button");
-        fab.id = "reader-fab-settings";
-        fab.type = "button";
-        fab.title = "Reader Settings";
-        fab.setAttribute("aria-label", "Reader Settings");
-        fab.onclick = function () { window.openReaderSettings(); };
-        fab.style.cssText =
-          "position:fixed;top:12px;right:12px;z-index:55;padding:10px;border-radius:9999px;" +
-          "background:rgba(30,30,30,.85);color:#f97316;border:1px solid #3a3a3a;cursor:pointer;" +
-          "box-shadow:0 4px 14px rgba(0,0,0,.4);backdrop-filter:blur(4px);transition:opacity .2s;";
-        fab.innerHTML =
-          '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-          '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>' +
-          '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>';
-        document.body.appendChild(fab);
-      }
-      fab.style.display = "block";
-    } else if (fab) {
-      fab.style.display = "none";
-    }
-  }
-
-  // ---------- Cập nhật trạng thái nút trong popup ----------
-  function syncButtons() {
-    const map = [
-      [".rs-display", prefs.display],
-      [".rs-dir", prefs.dir],
-      [".rs-header", prefs.header],
-      [".rs-progress", prefs.progress],
-    ];
-    map.forEach(([sel, val]) => {
-      document.querySelectorAll(sel).forEach((b) => {
-        b.classList.toggle("rs-active", b.getAttribute("data-val") === val);
-      });
-    });
-  }
-
-  // ---------- Gắn sự kiện cho các nút popup ----------
-  function bindGroup(sel, field, after) {
-    document.querySelectorAll(sel).forEach((btn) => {
-      btn.addEventListener("click", () => {
-        prefs[field] = btn.getAttribute("data-val");
-        if (field === "display") pageIndex = 0;
-        savePrefs(); syncButtons();
-        if (after) after();
-      });
-    });
-  }
-  bindGroup(".rs-display", "display", applyDisplay);
-  bindGroup(".rs-dir", "dir", applyDisplay);
-  bindGroup(".rs-header", "header", applyHeader);
-  bindGroup(".rs-progress", "progress", () => { applyProgressPos(); updateProgress(); });
-
-  // ---------- Mở / đóng popup (fade in/out) ----------
-  window.openReaderSettings = function () {
-    const ov = document.getElementById("reader-settings-overlay");
-    const card = document.getElementById("reader-settings-card");
-    if (!ov) return;
-    syncButtons();
-    ov.classList.remove("opacity-0", "pointer-events-none");
-    ov.classList.add("opacity-100");
-    if (card) { card.classList.remove("scale-95"); card.classList.add("scale-100"); }
-    document.body.style.overflow = "hidden";
-  };
-  window.closeReaderSettings = function () {
-    const ov = document.getElementById("reader-settings-overlay");
-    const card = document.getElementById("reader-settings-card");
-    if (!ov) return;
-    ov.classList.add("opacity-0", "pointer-events-none");
-    ov.classList.remove("opacity-100");
-    if (card) { card.classList.add("scale-95"); card.classList.remove("scale-100"); }
-    document.body.style.overflow = "";
-  };
-
-  // ---------- Khởi tạo ----------
-  applyProgressPos();
-  applyDisplay();
-  applyHeader();
-  syncButtons();
-})();
-
+ // ---------- Khởi tạo ----------
+ applyProgressPos()
+ applyDisplay()
+ applyHeader()
+ syncButtons()
+})()
 
 // ============================================================
 //  NAV TRONG SUỐT Ở TRANG CHỦ (lộ ảnh nền carousel xuyên qua header)
@@ -747,17 +899,90 @@ window.closePaymentModal = function () {
 //  Ở đỉnh trang: nav trong suốt. Cuộn xuống quá ngưỡng: nav có nền đặc lại.
 // ============================================================
 ;(function () {
-  const hero = document.getElementById("popular-hero");
-  if (!hero) return; // trang khác không có carousel -> bỏ qua, nav giữ nền mặc định
+ const hero = document.getElementById("popular-hero")
+ if (!hero) return // trang khác không có carousel -> bỏ qua, nav giữ nền mặc định
 
-  const THRESHOLD = 180; // px cuộn trước khi nav chuyển sang nền đặc
-  function onScroll() {
-    if (window.scrollY < THRESHOLD) {
-      document.body.classList.add("nav-transparent");
-    } else {
-      document.body.classList.remove("nav-transparent");
-    }
+ const THRESHOLD = 180 // px cuộn trước khi nav chuyển sang nền đặc
+ function onScroll() {
+  if (window.scrollY < THRESHOLD) {
+   document.body.classList.add("nav-transparent")
+  } else {
+   document.body.classList.remove("nav-transparent")
   }
-  onScroll(); // set trạng thái ban đầu
-  window.addEventListener("scroll", onScroll, { passive: true });
-})();
+ }
+ onScroll() // set trạng thái ban đầu
+ window.addEventListener("scroll", onScroll, { passive: true })
+})()
+
+// ============================================================
+//  NAV TRONG SUỐT Ở TRANG TRUYỆN (lộ ảnh nền mờ xuyên qua header)
+//  Tự động quét thẻ chứa ảnh nền mờ đặc trưng của manga.html
+// ============================================================
+;(function () {
+ // Tìm khối div nền mờ dựa vào các class Tailwind đặc trưng của trang manga
+ const mangaBg = document.querySelector(".pointer-events-none.fixed.inset-x-0.top-0.z-0")
+
+ // Nếu không tìm thấy (nghĩa là đang ở trang khác) -> Dừng chạy, giữ nguyên nền đen mặc định
+ if (!mangaBg) return
+
+ // Ngưỡng px cuộn xuống trước khi nav chuyển sang nền đặc
+ // (mình để 60px cho trang truyện vì không có carousel to như trang chủ)
+ const THRESHOLD = 60
+
+ function onScroll() {
+  if (window.scrollY < THRESHOLD) {
+   document.body.classList.add("nav-transparent")
+  } else {
+   document.body.classList.remove("nav-transparent")
+  }
+ }
+
+ // Thiết lập trạng thái ngay khi vừa load trang
+ onScroll()
+
+ // Lắng nghe sự kiện cuộn chuột
+ window.addEventListener("scroll", onScroll, { passive: true })
+})()
+
+// ============================================================
+//  ĐĂNG KÝ SUPPORTER — hiện popup cảm ơn thay vì redirect
+// ============================================================
+;(function () {
+ const form = document.querySelector("#payment-modal-card form")
+ if (!form) return
+ form.addEventListener("submit", function (e) {
+  e.preventDefault()
+  if (!form.checkValidity()) {
+   form.reportValidity()
+   return
+  }
+  const btn = form.querySelector('button[type="submit"]')
+  const orig = btn ? btn.textContent : ""
+  if (btn) {
+   btn.disabled = true
+   btn.textContent = "Đang xử lý..."
+  }
+  fetch("/api/upgrade", { method: "POST", headers: { "X-Requested-With": "fetch" } })
+   .then(function () {
+    if (window.closePaymentModal) window.closePaymentModal()
+    const ov = document.getElementById("success-modal-overlay")
+    const card = document.getElementById("success-modal-card")
+    if (ov && card) {
+     ov.classList.remove("opacity-0", "pointer-events-none")
+     card.classList.remove("scale-95")
+     card.classList.add("scale-100")
+    } else {
+     window.location.href = "/setting"
+    }
+   })
+   .catch(function () {
+    window.location.href = "/setting"
+   })
+   .finally(function () {
+    if (btn) {
+     btn.disabled = false
+     btn.textContent = orig
+    }
+   })
+ })
+})()

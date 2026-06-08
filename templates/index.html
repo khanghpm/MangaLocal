@@ -8,21 +8,31 @@
     <title>MangaLocal - Home</title>
   </head>
 
-  <body class="bg-black text-gray-200 min-h-screen flex flex-col nav-transparent">
+  <body
+    class="bg-black text-gray-200 min-h-screen flex flex-col nav-transparent"
+  >
     <style>
       /* Trang chủ: nav trong suốt khi ở đỉnh để lộ ảnh nền carousel xuyên qua;
          cuộn xuống thì nav có nền đặc lại cho dễ đọc. (Chỉ áp dụng ở index.html) */
       body.nav-transparent nav {
         background-color: transparent !important;
         border-bottom-color: transparent !important;
-        transition: background-color .35s ease, border-color .35s ease;
+        transition:
+          background-color 0.35s ease,
+          border-color 0.35s ease;
       }
-      nav { transition: background-color .35s ease, border-color .35s ease; }
+      nav {
+        transition:
+          background-color 0.35s ease,
+          border-color 0.35s ease;
+      }
     </style>
     {% include 'nav.html' %}
     {% with messages = get_flashed_messages() %}{% if messages %}
-      <div id="flash-container"
-        class="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 flex flex-col gap-2 items-center pointer-events-none">
+      <div
+        id="flash-container"
+        class="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 flex flex-col gap-2 items-center pointer-events-none"
+      >
         {% for message in messages %}
           <div
             class="flash-alert w-full text-center bg-[#1a1a1a]/90 backdrop-blur-md border border-orange-500/50 text-orange-400 px-4 py-3 rounded-lg text-xs font-bold uppercase tracking-wider shadow-2xl transition-opacity duration-1000 pointer-events-auto"
@@ -45,7 +55,12 @@
         <div
           id="hero-bg"
           aria-hidden="true"
-          class="absolute inset-0 bg-cover bg-center scale-110 blur-3px opacity-95 transition-all duration-500"
+          class="absolute inset-0 bg-cover bg-center scale-110 blur-3px opacity-95"
+        ></div>
+        <div
+          id="hero-bg2"
+          aria-hidden="true"
+          class="absolute inset-0 bg-cover bg-center scale-110 blur-3px opacity-0"
         ></div>
         <div
           class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/70 to-black"
@@ -60,58 +75,60 @@
           </h2>
 
           <div
-            id="hero-track"
-            class="relative select-none cursor-grab active:cursor-grabbing min-h-[260px]"
+            id="hero-viewport"
+            class="relative overflow-hidden select-none cursor-grab active:cursor-grabbing"
           >
-            {% for m in manga_list[:10] %}
-              <div
-                class="hero-slide {% if not loop.first %}hidden{% endif %} flex gap-6"
-                data-index="{{ loop.index0 }}"
-                data-cover="{{ m.cover_lg or m.cover }}"
-                data-cover-sm="{{ m.cover }}"
-              >
-                <a href="/manga/{{ m.id }}" class="shrink-0">
-                  <img
-                    src="{{ m.cover }}"
-                    alt="{{ m.title }}"
-                    class="w-[160px] h-[230px] object-cover rounded-lg shadow-2xl border border-white/10"
-                    draggable="false"
-                    loading="lazy"
-                  />
-                </a>
-                <div class="flex flex-col justify-start pt-1 min-w-0">
-                  <a href="/manga/{{ m.id }}">
-                    <h3
-                      class="text-2xl md:text-3xl font-extrabold text-white leading-tight hover:text-orange-400 transition line-clamp-2"
-                    >
-                      {{ m.title }}
-                    </h3>
+            <div id="hero-track" class="flex">
+              {% for m in manga_list[:10] %}
+                <div
+                  class="hero-slide shrink-0 w-full flex gap-6 min-h-[260px]"
+                  data-index="{{ loop.index0 }}"
+                  data-cover="{{ m.cover_lg or m.cover }}"
+                  data-cover-sm="{{ m.cover }}"
+                >
+                  <a href="/manga/{{ m.id }}" class="shrink-0">
+                    <img
+                      src="{{ m.cover }}"
+                      alt="{{ m.title }}"
+                      class="w-[160px] h-[230px] object-cover rounded-lg shadow-2xl border border-white/10"
+                      draggable="false"
+                      loading="lazy"
+                    />
                   </a>
-                  {% if m.tags %}
-                    <div class="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-                      {% for tag in m.tags %}
-                        <span
-                          class="text-[10px] font-bold uppercase tracking-widest text-gray-300"
-                          >{{ tag }}</span
-                        >
-                      {% endfor %}
-                    </div>
-                  {% endif %}
-                  {% if m.description %}
-                    <p
-                      class="text-sm text-gray-300 mt-3 leading-relaxed line-clamp-3 max-w-2xl"
-                    >
-                      {{ m.description }}
-                    </p>
-                  {% endif %}
-                  {% if m.author %}
-                    <p class="text-xs italic text-gray-400 mt-auto pt-4">
-                      {{ m.author }}
-                    </p>
-                  {% endif %}
+                  <div class="flex flex-col justify-start pt-1 min-w-0">
+                    <a href="/manga/{{ m.id }}">
+                      <h3
+                        class="text-2xl md:text-3xl font-extrabold text-white leading-tight hover:text-orange-400 transition line-clamp-2"
+                      >
+                        {{ m.title }}
+                      </h3>
+                    </a>
+                    {% if m.tags %}
+                      <div class="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                        {% for tag in m.tags %}
+                          <span
+                            class="text-[10px] font-bold uppercase tracking-widest text-gray-300"
+                            >{{ tag }}</span
+                          >
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    {% if m.description %}
+                      <p
+                        class="text-sm text-gray-300 mt-3 leading-relaxed line-clamp-3 max-w-2xl"
+                      >
+                        {{ m.description }}
+                      </p>
+                    {% endif %}
+                    {% if m.author %}
+                      <p class="text-xs italic text-gray-400 mt-auto pt-4">
+                        {{ m.author }}
+                      </p>
+                    {% endif %}
+                  </div>
                 </div>
-              </div>
-            {% endfor %}
+              {% endfor %}
+            </div>
 
             <div class="absolute bottom-0 right-0 flex items-center gap-3 z-20">
               <span
@@ -334,6 +351,7 @@
 
     {% include 'auth_modal.html' %}
 
+    <!-- ===== link logic javascript vào trong trang ===== -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   </body>
 </html>
