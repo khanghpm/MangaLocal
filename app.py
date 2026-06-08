@@ -1,4 +1,4 @@
-import requests
+import requests, os
 from validators import ValidationError, validate_email, validate_password, validate_username, validate_search_query
 from itsdangerous import URLSafeTimedSerializer
 from datetime import datetime, date
@@ -11,8 +11,18 @@ from app_helpers import fetch_manga_list, fetch_manga_detail, fetch_chapters, fe
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
-app.config['SECRET_KEY'] = 'manga-local-secret-2026' # Change this for production
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SECRET_KEY'] = 'manga-local-secret-2026' # Đổi cái này khi lên production
+
+# --- XỬ LÝ DATABASE THÔNG MINH ---
+database_url = os.environ.get('DATABASE_URL')
+
+if database_url:
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 ts = URLSafeTimedSerializer(app.config["SECRET_KEY"])
