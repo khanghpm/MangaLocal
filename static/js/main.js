@@ -993,3 +993,17 @@ window.closePaymentModal = function () {
    })
  })
 })()
+// ============================================================
+//  ĐIỀU KHIỂN MENU MOBILE (HAMBURGER)
+// ============================================================
+;(function () {
+ const mobileBtn = document.getElementById("mobile-menu-btn")
+ const navMenu = document.getElementById("nav-menu")
+
+ if (mobileBtn && navMenu) {
+  mobileBtn.addEventListener("click", function () {
+   // Toggle giữa class ẩn (hidden) và class hiện (flex)
+   navMenu.classList.toggle("hidden")
+  })
+ }
+})()
