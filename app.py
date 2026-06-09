@@ -23,6 +23,13 @@ if database_url:
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 
+# === THÊM ĐOẠN NÀY ĐỂ CHỐNG ĐỨT KẾT NỐI NEON ===
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,  # Luôn kiểm tra "sức khỏe" kết nối trước khi query
+    "pool_recycle": 300     # Tự động thay kết nối mới sau mỗi 5 phút để tránh bị Neon đá
+}
+# ===============================================
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 ts = URLSafeTimedSerializer(app.config["SECRET_KEY"])
