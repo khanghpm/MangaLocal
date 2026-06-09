@@ -589,6 +589,13 @@ window.closePaymentModal = function () {
  }
  viewport.addEventListener("mouseenter", stopAuto)
  viewport.addEventListener("mouseleave", startAuto)
+ document.addEventListener("visibilitychange", function () {
+  if (document.hidden) {
+   stopAuto() // Tab bị ẩn -> Dừng trượt
+  } else {
+   startAuto() // Mở lại tab -> Chạy trượt tiếp
+  }
+ })
 
  // --- Kéo-thả theo con trỏ ---
  let dragging = false,
