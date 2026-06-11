@@ -117,6 +117,37 @@
       }
 
       /* Long strip: mặc định (cuộn dọc) — không cần style thêm */
+
+      /* ============================================================
+         AUTO-HIDE NAV KHI ĐỌC TRUYỆN
+         - Nav chính trượt lên ẩn khi rời khỏi đầu trang (mọi mode)
+         - Chỉ hiện lại khi kéo về sát trên cùng
+         - KHÔNG ảnh hưởng nút Reader Settings (FAB position:fixed riêng)
+         - KHÔNG ẩn [data-reader-header] (đã có option riêng trong Settings),
+           chỉ dời top của nó từ 72px -> 0 để không hở khoảng trống
+         ============================================================ */
+      body > nav {
+        transition: transform 0.25s ease;
+      }
+      body.reader-nav-hidden > nav {
+        transform: translateY(-100%);
+      }
+      [data-reader-header] {
+        transition: top 0.25s ease;
+      }
+      body.reader-nav-hidden [data-reader-header] {
+        top: 0;
+      }
+      /* Tận dụng thêm diện tích hiển thị truyện khi nav đã ẩn */
+      body.reader-nav-hidden #reader-image-container.mode-paged {
+        min-height: calc(100vh - 70px);
+      }
+      body.reader-nav-hidden #reader-image-container.mode-paged img {
+        max-height: calc(100vh - 78px);
+      }
+      body.reader-nav-hidden #reader-image-container.mode-wide {
+        height: calc(100vh - 64px);
+      }
     </style>
   </head>
   <body class="bg-black text-gray-200 min-h-screen flex flex-col">

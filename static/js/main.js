@@ -993,3 +993,73 @@ window.closePaymentModal = function () {
    })
  })
 })()
+
+// ============================================================
+//  AUTO-HIDE NAV LOGIC — chạy cho cả 4 mode đọc
+//  - Long strip : theo dõi window.scrollY
+//  - Wide strip : theo dõi cả scrollLeft của container (cuộn ngang)
+//  - Single/Double : theo dõi trang hiện tại (lật khỏi trang 1 = ẩn)
+//  Quy tắc: ẨN khi rời khỏi đầu; HIỆN lại CHỈ khi về sát trên cùng.
+//  Dùng 2 ngưỡng (hysteresis) để nav không nhấp nháy quanh ranh giới.
+//  Nút Reader Settings (#reader-fab-settings) là position:fixed riêng,
+//  không nằm trong nav nên KHÔNG bị ẩn theo.
+// ============================================================
+;(function () {
+  var nav = document.querySelector("body > nav")
+  if (!nav) return
+  var container = document.getElementById("reader-image-container")
+  var SHOW_AT = 10 // về dưới ngưỡng này -> hiện nav
+  var HIDE_AFTER = 80 // vượt ngưỡng này -> ẩn nav
+
+  function mode() {
+   if (!container) return "long"
+   if (container.classList.contains("mode-wide")) return "wide"
+   if (container.classList.contains("mode-paged")) return "paged"
+   return "long"
+  }
+
+  function firstPageVisible() {
+   if (!container) return true
+   var imgs = container.querySelectorAll("img")
+   if (!imgs.length) return true
+   return imgs[0].classList.contains("page-visible")
+  }
+
+  function atTop() {
+   if (window.scrollY > SHOW_AT) return false
+   var m = mode()
+   if (m === "wide" && container && Math.abs(container.scrollLeft) > SHOW_AT) return false // wide: phải kéo về đầu strip (hỗ trợ cả RTL)
+   if (m === "paged" && !firstPageVisible()) return false // single/double: phải về trang đầu
+   return true
+  }
+
+  function shouldHide() {
+   if (window.scrollY > HIDE_AFTER) return true
+   var m = mode()
+   if (m === "wide" && container && Math.abs(container.scrollLeft) > HIDE_AFTER) return true
+   if (m === "paged" && !firstPageVisible()) return true
+   return false
+  }
+
+  function update() {
+   if (atTop()) {
+    document.body.classList.remove("reader-nav-hidden")
+   } else if (shouldHide()) {
+    document.body.classList.add("reader-nav-hidden")
+   }
+   /* nằm giữa 2 ngưỡng: giữ nguyên trạng thái hiện tại */
+  }
+
+  window.addEventListener("scroll", update, { passive: true })
+  if (container) {
+   // Wide strip cuộn ngang trong container
+   container.addEventListener("scroll", update, { passive: true })
+   // Single/Double lật trang & đổi mode đều thay đổi class -> observer bắt được
+   new MutationObserver(update).observe(container, {
+    attributes: true,
+    attributeFilter: ["class"],
+    subtree: true,
+   })
+  }
+  update()
+})()
