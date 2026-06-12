@@ -200,12 +200,12 @@
                   <!-- Thanh chạy (Track) -->
                   <span
                     id="safe-toggle-track"
-                    class="pointer-events-none absolute mx-auto h-3 w-8 rounded-full transition-colors duration-200 ease-in-out {% if session.get('safe_mode') %}bg-orange-500{% else %}bg-gray-600{% endif %}"
+                    class="pointer-events-none absolute mx-auto h-3 w-8 rounded-full transition-colors duration-200 ease-in-out {% if session.get('safe_mode_v2', True) %}bg-orange-500{% else %}bg-gray-600{% endif %}"
                   ></span>
-                  <!-- Nút tròn (Thumb) -->
+
                   <span
                     id="safe-toggle-thumb"
-                    class="pointer-events-none absolute left-0 inline-block h-4 w-4 transform rounded-full border border-gray-300 bg-white shadow-sm transition-transform duration-200 ease-in-out {% if session.get('safe_mode') %}translate-x-4{% else %}translate-x-0{% endif %}"
+                    class="pointer-events-none absolute left-0 inline-block h-4 w-4 transform rounded-full border border-gray-300 bg-white shadow-sm transition-transform duration-200 ease-in-out {% if session.get('safe_mode_v2', True) %}translate-x-4{% else %}translate-x-0{% endif %}"
                   ></span>
                 </button>
               </div>
@@ -219,6 +219,30 @@
           </div>
         </div>
       {% else %}
+        <div
+          onclick="toggleSafeMode(event)"
+          class="flex items-center gap-2 px-3 py-2 mr-2 hover:bg-white/5 rounded-lg transition cursor-pointer group"
+          title="Toggle Safe Content"
+        >
+          <span class="text-sm group-hover:scale-110 transition-transform"
+            >🛡️</span
+          >
+          <button
+            type="button"
+            aria-label="Toggle Safe Content"
+            class="relative inline-flex h-4 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none"
+          >
+            <span
+              id="guest-safe-toggle-track"
+              class="pointer-events-none absolute mx-auto h-3 w-8 rounded-full transition-colors duration-200 ease-in-out {% if session.get('safe_mode_v2', True) %}bg-orange-500{% else %}bg-gray-600{% endif %}"
+            ></span>
+            <span
+              id="guest-safe-toggle-thumb"
+              class="pointer-events-none absolute left-0 inline-block h-4 w-4 transform rounded-full border border-gray-300 bg-white shadow-sm transition-transform duration-200 ease-in-out {% if session.get('safe_mode_v2', True) %}translate-x-4{% else %}translate-x-0{% endif %}"
+            ></span>
+          </button>
+        </div>
+
         <button
           onclick="openAuth()"
           class="text-sm font-bold bg-gray-800 px-4 py-2 rounded hover:bg-gray-700 transition border border-gray-700 shadow-lg"

@@ -42,6 +42,29 @@ login_manager.login_view = 'index' # Redirect to home if login is required
 
 API_URL = "https://api.mangadex.org"
 
+# ==========================================
+# SAFE CONTENT FILTER & TAGS MAP
+# ==========================================
+
+def safe_mode_on():
+    """Safe Content mặc định BẬT khi người dùng chưa từng chỉnh công tắc."""
+    return session.get('safe_mode_v2', True)
+
+def allowed_ratings():
+    """
+    BẬT -> chỉ safe. 
+    TẮT -> hiện safe + suggestive (bỏ erotica/pornographic để web không bị sập vì nội dung 18+ nặng).
+    """
+    return ["safe"] if safe_mode_on() else ["safe", "suggestive"]
+
+# Danh sách đen: Bắt buộc chặn dù có gắn nhãn Safe đi nữa
+NSFW_TAGS = [
+    "b2ea41d3-8cb7-4320-a4f4-73fe8864059d", # Ecchi / Hở hang nhẹ
+    "b29d6a3d-1569-4e7a-8caf-7557bc92cd5d", # Gore / Máu me, bạo lực
+    "97893a4c-12af-4dac-b6be-0dffb3531bba", # Sexual Violence
+    "5bd0e105-4481-44ca-b6e7-7544da56b1a3"  # Incest / Loạn luân
+]
+
 TAGS_MAP = {
     "Action": "391b0423-d847-456f-bbb0-8b094c10c1d1",
     "Adventure": "87dbfd80-3846-47ab-b541-9392228d7711",
@@ -60,7 +83,6 @@ TAGS_MAP = {
     "Isekai": "ace04907-f6dd-477c-910d-405e3d0d30c1",
     "Historical": "3bbac9a5-6346-4abf-b4f4-fd9a269e901c"
 }
-
 # --- USER MODEL ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -294,8 +316,14 @@ def index():
         params = {
             "limit": 20, 
             "includes[]": ["cover_art", "author"],
-            "contentRating[]": ["safe"] if session.get('safe_mode') else ["safe", "suggestive"] 
+            "contentRating[]": allowed_ratings()
         }
+        if safe_mode_on():
+            if "excludedTags[]" in params:
+                params["excludedTags[]"] += NSFW_TAGS
+            else:
+                params["excludedTags[]"] = NSFW_TAGS
+
         resp = fetch_manga_list(params)
         
         manga_data = []
@@ -373,8 +401,15 @@ def index():
             "limit": 6, 
             "offset": 40,
             "includes[]": ["cover_art"],
-            "contentRating[]": ["safe"] if session.get('safe_mode') else ["safe", "suggestive"]
+            "contentRating[]": allowed_ratings()
         }
+
+        if safe_mode_on():
+            if "excludedTags[]" in rec_params:
+                rec_params["excludedTags[]"] += NSFW_TAGS
+            else:
+                rec_params["excludedTags[]"] = NSFW_TAGS
+
         rec_resp = fetch_manga_list(rec_params)
         
         for m in rec_resp.get('data', []):
@@ -408,9 +443,14 @@ def load_more_hot():
         "limit": limit,
         "offset": offset,
         "includes[]": ["cover_art"],
-        "contentRating[]": ["safe"] if session.get('safe_mode') else ["safe", "suggestive"]
+        "contentRating[]": allowed_ratings()
+        
     }
-    
+    if safe_mode_on():
+        if "excludedTags[]" in params:
+            params["excludedTags[]"] += NSFW_TAGS
+        else:
+            params["excludedTags[]"] = NSFW_TAGS
     try:
         resp = requests.get(f"{API_URL}/manga", params=params).json()
         
@@ -459,6 +499,11 @@ def manga_details(id):
         m_data = m_resp.get('data', {})
         attr = m_data.get('attributes', {})
         links = attr.get('links', {})
+
+        # SAFE CONTENT GUARD: chặn truy cập trực tiếp truyện 18+ khi Safe đang bật
+        if attr.get('contentRating') not in allowed_ratings():
+            flash("This title is hidden by Safe Content mode.", "error")
+            return redirect('/')
         
         # 2. Extract available languages for the switcher menu
         available_langs = attr.get('availableTranslatedLanguages', [])
@@ -498,9 +543,8 @@ def manga_details(id):
             "limit": 500, 
             "translatedLanguage[]": [target_lang, "no"], 
             "order[chapter]": "desc",
-            "contentRating[]": ["safe"] if session.get('safe_mode') else ["safe", "suggestive", "erotica", "pornographic"]
+            "contentRating[]": allowed_ratings()
         }
-        
         c_request = requests.get(f"{API_URL}/manga/{id}/feed", params=c_params)
         raw_chapters = []
         
@@ -515,7 +559,12 @@ def manga_details(id):
             unique_chapters.append(chap)
 
         # 4. Recommendations Logic (BULLETPROOF)
-        rec_params = {"limit": 7, "includes[]": ["cover_art"], "contentRating[]": ["safe"] if session.get('safe_mode') else ["safe", "suggestive"]}
+        rec_params = {"limit": 7, "includes[]": ["cover_art"], "contentRating[]": allowed_ratings()}
+        if safe_mode_on():
+            if "excludedTags[]" in rec_params:
+                rec_params["excludedTags[]"] += NSFW_TAGS
+            else:
+                rec_params["excludedTags[]"] = NSFW_TAGS
         if tag_ids:
             rec_params["includedTags[]"] = tag_ids[:3]
         
@@ -595,7 +644,10 @@ def search():
     statuses = request.args.getlist('status')
     types = request.args.getlist('type')
     demographics = request.args.getlist('demographic')
-    ratings = request.args.getlist('rating') or (["safe"] if session.get('safe_mode') else ["safe", "suggestive"])
+    _requested_ratings = request.args.getlist('rating')
+    _allowed = allowed_ratings()
+    # Chỉ nhận rating nằm trong danh sách cho phép (chặn bypass ?rating=pornographic khi Safe đang bật)
+    ratings = [r for r in _requested_ratings if r in _allowed] or _allowed
     sort_by = request.args.get('sort', 'relevance')
     order_dir = request.args.get('order', 'desc')
     
@@ -746,7 +798,12 @@ def setting():
 
 @app.route('/random')
 def random_manga():
-    response = requests.get(f"{API_URL}/manga/random").json()
+    params = {"contentRating[]": allowed_ratings()}
+    
+    if safe_mode_on():
+        params["excludedTags[]"] = NSFW_TAGS
+        
+    response = requests.get(f"{API_URL}/manga/random", params=params).json()
     manga_id = response['data']['id']
     return redirect(f"/manga/{manga_id}")
 
@@ -757,12 +814,18 @@ def search_suggestions():
         return jsonify([])
 
     try:
-        # 1. Fetch from MangaDex
-        resp = requests.get(f"{API_URL}/manga", params={
+        # Tách params ra riêng để dễ bảo vệ
+        params = {
             "title": query,
             "limit": 5,
-            "includes[]": ["cover_art"]
-        }).json()
+            "includes[]": ["cover_art"],
+            "contentRating[]": allowed_ratings()
+        }
+        
+        if safe_mode_on():
+            params["excludedTags[]"] = NSFW_TAGS
+
+        resp = requests.get(f"{API_URL}/manga", params=params).json()
         
         data = resp.get('data', [])
         results = [] # Defining 'results' here fixes the error!
@@ -818,6 +881,11 @@ def reader(chapter_id):
         # 2. Get Manga Title AND Cover Art
         m_resp = fetch_manga_detail(manga_id)
         m_data = m_resp.get('data', {})
+
+        # SAFE CONTENT GUARD: chặn đọc chương của truyện 18+ khi Safe đang bật
+        if m_data.get('attributes', {}).get('contentRating') not in allowed_ratings():
+            flash("This title is hidden by Safe Content mode.", "error")
+            return redirect('/')
         m_title = m_data.get('attributes', {}).get('title', {}).get('en') or \
                   next(iter(m_data.get('attributes', {}).get('title', {}).values()), "Untitled")
 
@@ -1044,10 +1112,9 @@ def admin_picks_info():
 @app.route('/api/toggle-safe-mode', methods=['POST'])
 def toggle_safe_mode():
     data = request.json
-    # Lưu trạng thái (True/False) vào session trình duyệt của người dùng
-    session['safe_mode'] = data.get('safe_mode', False)
+    session['safe_mode_v2'] = data.get('safe_mode', False)
     session.modified = True
-    return jsonify({"success": True, "safe_mode": session['safe_mode']})
+    return jsonify({"success": True, "safe_mode": session['safe_mode_v2']})
 
 # --- SUPPORT US ---
 @app.route('/support-us')

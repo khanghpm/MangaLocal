@@ -998,10 +998,14 @@ window.closePaymentModal = function () {
 // SAFE CONTENT FILTER (TOGGLE SWITCH)
 // ============================================================
 window.toggleSafeMode = async function (event) {
- event.stopPropagation() // Tránh làm đóng dropdown khi bấm vào công tắc
+ if (event) event.stopPropagation() // Tránh làm đóng dropdown khi bấm vào công tắc
 
- const track = document.getElementById("safe-toggle-track")
- const thumb = document.getElementById("safe-toggle-thumb")
+ // Tìm track và thumb của User HOẶC của Guest (cái nào đang hiện trên màn hình thì lấy)
+ const track = document.getElementById("safe-toggle-track") || document.getElementById("guest-safe-toggle-track")
+ const thumb = document.getElementById("safe-toggle-thumb") || document.getElementById("guest-safe-toggle-thumb")
+
+ // Nếu không tìm thấy công tắc nào (lỗi DOM) thì thoát luôn để tránh crash trang
+ if (!track || !thumb) return
 
  // Xác định trạng thái hiện tại dựa trên việc nút tròn có đang ở bên phải không
  const isCurrentlyOn = thumb.classList.contains("translate-x-4")
