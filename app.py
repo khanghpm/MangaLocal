@@ -1009,6 +1009,36 @@ def admin_dashboard():
     picks = AdminPick.query.all()
     return render_template('admin.html', users=users, picks=picks)
 
+
+@app.route("/api/admin/picks-info")
+@login_required
+def admin_picks_info():
+    # Chỉ admin được xem (đồng bộ với rule của /admin)
+    if not current_user.is_admin:
+        return jsonify({"result": "error", "data": []}), 403
+
+    picks = AdminPick.query.all()
+    ids = [p.manga_id for p in picks]
+    if not ids:
+        return jsonify({"result": "ok", "data": []})
+
+    try:
+        resp = requests.get(
+            "https://api.mangadex.org/manga",
+            params={
+                "ids[]": ids,                # requests tự lặp ids[]=..&ids[]=..
+                "includes[]": "cover_art",
+                "limit": min(len(ids), 100), # limit mặc định của MangaDex là 10
+            },
+            headers={"User-Agent": "MangaLocal/1.0"},
+            timeout=10,
+        )
+        data = resp.json()
+        return jsonify({"result": "ok", "data": data.get("data", [])})
+    except Exception:
+        return jsonify({"result": "error", "data": []}), 502
+
+
 # --- SUPPORT US ---
 @app.route('/support-us')
 def support_us():

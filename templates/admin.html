@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
     <script src="https://cdn.tailwindcss.com"></script>
     <title>Command Center - MangaLocal</title>
   </head>
@@ -153,15 +154,56 @@
             </button>
           </form>
 
-          <div class="space-y-3">
+          <div class="space-y-3" id="admin-picks-list">
             {% for pick in picks %}
               <div
-                class="flex items-center justify-between bg-black border border-gray-800 rounded-lg p-3"
+                class="admin-pick-card flex items-center gap-3 bg-black border border-gray-800 rounded-lg p-3 hover:border-gray-700 transition"
+                data-manga-id="{{ pick.manga_id }}"
               >
-                <div class="text-sm font-mono text-gray-400">
-                  {{ pick.manga_id }}
+                <!-- Ảnh bìa (JS sẽ điền sau khi gọi MangaDex) -->
+                <a
+                  href="/manga/{{ pick.manga_id }}"
+                  target="_blank"
+                  data-pick-cover
+                  aria-label="Mở trang chi tiết manga"
+                  title="Mở trang chi tiết"
+                  class="w-12 h-16 rounded bg-gray-900 border border-gray-800 flex-shrink-0 overflow-hidden flex items-center justify-center"
+                >
+                  <svg
+                    class="w-5 h-5 text-gray-700 animate-pulse"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+                    />
+                  </svg>
+                </a>
+
+                <!-- Tên + tags -->
+                <div class="flex-grow min-w-0">
+                  <a
+                    href="/manga/{{ pick.manga_id }}"
+                    target="_blank"
+                    data-pick-title
+                    class="block text-sm font-bold text-white truncate hover:text-orange-500 transition"
+                  >
+                    <span class="font-mono text-gray-500 text-xs"
+                      >{{ pick.manga_id }}</span
+                    >
+                  </a>
+                  <div data-pick-tags class="flex flex-wrap gap-1 mt-1.5"></div>
                 </div>
-                <form action="/admin" method="POST" class="inline">
+
+                <form
+                  action="/admin"
+                  method="POST"
+                  class="inline flex-shrink-0"
+                >
                   <input type="hidden" name="action" value="remove_pick" />
                   <input type="hidden" name="pick_id" value="{{ pick.id }}" />
                   <button
@@ -230,5 +272,173 @@
     </footer>
     {% include 'auth_modal.html' %}
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+      /* ============================================================
+         ADMIN RECOMMENDS — Làm giàu thẻ manga đã ghim
+         Thứ tự lấy dữ liệu:
+         1) /api/admin/picks-info  (proxy qua Flask — KHÔNG bị adblock/
+            CORS chặn vì server vốn đã gọi MangaDex ở mọi trang khác)
+         2) Fallback: gọi thẳng api.mangadex.org từ trình duyệt
+         Mọi lỗi đều log rõ ra Console (F12) thay vì im lặng.
+         ============================================================ */
+      (function () {
+        var cards = document.querySelectorAll(
+          ".admin-pick-card[data-manga-id]",
+        );
+        if (!cards.length) return;
+
+        var seen = {};
+        var ids = [];
+        cards.forEach(function (c) {
+          var id = c.getAttribute("data-manga-id");
+          if (id && !seen[id]) {
+            seen[id] = true;
+            ids.push(id);
+          }
+        });
+        if (!ids.length) return;
+
+        // ---- 1) Thử proxy nội bộ trước ----
+        fetch("/api/admin/picks-info")
+          .then(function (r) {
+            if (!r.ok) throw new Error("proxy unavailable (" + r.status + ")");
+            return r.json();
+          })
+          .then(function (json) {
+            fill(json.data || []);
+          })
+          .catch(function (e) {
+            console.warn(
+              "[AdminPicks] Proxy nội bộ chưa có (" +
+                e.message +
+                "), fallback gọi thẳng MangaDex...",
+            );
+            fetchDirect();
+          });
+
+        // ---- 2) Fallback: gọi thẳng MangaDex ----
+        function fetchDirect() {
+          var qs = ids
+            .map(function (id) {
+              return "ids[]=" + encodeURIComponent(id);
+            })
+            .join("&");
+          var url =
+            "https://api.mangadex.org/manga?" +
+            qs +
+            "&includes[]=cover_art&limit=" +
+            Math.min(ids.length, 100);
+
+          fetch(url)
+            .then(function (r) {
+              if (!r.ok) throw new Error("HTTP " + r.status);
+              return r.json();
+            })
+            .then(function (json) {
+              if (json.result !== "ok")
+                throw new Error("API result: " + json.result);
+              fill(json.data || []);
+            })
+            .catch(function (e) {
+              console.error(
+                "[AdminPicks] Không gọi được MangaDex từ trình duyệt: " +
+                  e.message +
+                  "\n→ Nguyên nhân thường gặp: adblock (uBlock) chặn domain mangadex," +
+                  " hoặc mạng chặn. Hãy thêm endpoint /api/admin/picks-info vào app.py" +
+                  " (xem hướng dẫn) để proxy qua server.",
+              );
+            });
+        }
+
+        // ---- Điền dữ liệu vào card ----
+        function fill(list) {
+          var map = {};
+          list.forEach(function (m) {
+            map[m.id] = m;
+          });
+          cards.forEach(function (card) {
+            var m = map[card.getAttribute("data-manga-id")];
+            if (!m) return;
+            try {
+              renderCard(card, m);
+            } catch (e) {
+              console.error("[AdminPicks] Lỗi render card:", e);
+            }
+          });
+        }
+
+        function pickTitle(attr) {
+          var t = attr.title || {};
+          if (t.en) return t.en;
+          var alts = attr.altTitles || [];
+          for (var i = 0; i < alts.length; i++) {
+            if (alts[i].en) return alts[i].en;
+          }
+          var k = Object.keys(t)[0];
+          return k ? t[k] : "Untitled";
+        }
+
+        function renderCard(card, m) {
+          var attr = m.attributes || {};
+
+          var titleEl = card.querySelector("[data-pick-title]");
+          if (titleEl) {
+            titleEl.textContent = pickTitle(attr);
+            titleEl.title = titleEl.textContent;
+          }
+
+          var rels = m.relationships || [];
+          var cov = null;
+          for (var i = 0; i < rels.length; i++) {
+            if (rels[i].type === "cover_art") {
+              cov = rels[i];
+              break;
+            }
+          }
+          var coverEl = card.querySelector("[data-pick-cover]");
+          if (coverEl && cov && cov.attributes && cov.attributes.fileName) {
+            var img = document.createElement("img");
+            img.src =
+              "https://uploads.mangadex.org/covers/" +
+              m.id +
+              "/" +
+              cov.attributes.fileName +
+              ".256.jpg";
+            img.alt = "";
+            img.loading = "lazy";
+            img.referrerPolicy = "no-referrer";
+            img.className = "w-full h-full object-cover";
+            coverEl.innerHTML = "";
+            coverEl.appendChild(img);
+          }
+
+          var tagsEl = card.querySelector("[data-pick-tags]");
+          if (tagsEl) {
+            tagsEl.innerHTML = "";
+            var names = [];
+            (attr.tags || []).forEach(function (t) {
+              var n = t.attributes && t.attributes.name;
+              if (!n) return;
+              var name = n.en || n[Object.keys(n)[0]];
+              if (name) names.push(name);
+            });
+            names.slice(0, 4).forEach(function (name) {
+              var s = document.createElement("span");
+              s.className =
+                "bg-gray-800/80 text-gray-400 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded";
+              s.textContent = name;
+              tagsEl.appendChild(s);
+            });
+            if (names.length > 4) {
+              var more = document.createElement("span");
+              more.className =
+                "text-gray-600 text-[10px] font-bold px-1 py-0.5";
+              more.textContent = "+" + (names.length - 4);
+              tagsEl.appendChild(more);
+            }
+          }
+        }
+      })();
+    </script>
   </body>
 </html>
