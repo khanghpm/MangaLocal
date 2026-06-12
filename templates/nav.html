@@ -181,6 +181,34 @@
                 </a>
               {% endif %}
               <div class="h-px bg-gray-800 my-1 mx-2"></div>
+              <!-- NÚT CÔNG TẮC SAFE CONTENT -->
+              <div
+                onclick="toggleSafeMode(event)"
+                class="flex items-center justify-between px-3 py-2.5 hover:bg-white/5 rounded-lg transition cursor-pointer group"
+              >
+                <div
+                  class="flex items-center gap-3 text-[11px] font-bold text-gray-400 group-hover:text-white transition"
+                >
+                  <span class="text-base">🛡️</span> Safe Content
+                </div>
+                <!-- Track & Thumb của Công tắc -->
+                <button
+                  type="button"
+                  aria-label="Toggle Safe Content"
+                  class="relative inline-flex h-4 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none"
+                >
+                  <!-- Thanh chạy (Track) -->
+                  <span
+                    id="safe-toggle-track"
+                    class="pointer-events-none absolute mx-auto h-3 w-8 rounded-full transition-colors duration-200 ease-in-out {% if session.get('safe_mode') %}bg-orange-500{% else %}bg-gray-600{% endif %}"
+                  ></span>
+                  <!-- Nút tròn (Thumb) -->
+                  <span
+                    id="safe-toggle-thumb"
+                    class="pointer-events-none absolute left-0 inline-block h-4 w-4 transform rounded-full border border-gray-300 bg-white shadow-sm transition-transform duration-200 ease-in-out {% if session.get('safe_mode') %}translate-x-4{% else %}translate-x-0{% endif %}"
+                  ></span>
+                </button>
+              </div>
               <a
                 href="/logout"
                 class="flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition"

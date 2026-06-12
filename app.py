@@ -294,7 +294,7 @@ def index():
         params = {
             "limit": 20, 
             "includes[]": ["cover_art", "author"],
-            "contentRating[]": ["safe", "suggestive"] 
+            "contentRating[]": ["safe"] if session.get('safe_mode') else ["safe", "suggestive"] 
         }
         resp = fetch_manga_list(params)
         
@@ -373,7 +373,7 @@ def index():
             "limit": 6, 
             "offset": 40,
             "includes[]": ["cover_art"],
-            "contentRating[]": ["safe", "suggestive"]
+            "contentRating[]": ["safe"] if session.get('safe_mode') else ["safe", "suggestive"]
         }
         rec_resp = fetch_manga_list(rec_params)
         
@@ -408,7 +408,7 @@ def load_more_hot():
         "limit": limit,
         "offset": offset,
         "includes[]": ["cover_art"],
-        "contentRating[]": ["safe", "suggestive"]
+        "contentRating[]": ["safe"] if session.get('safe_mode') else ["safe", "suggestive"]
     }
     
     try:
@@ -498,7 +498,7 @@ def manga_details(id):
             "limit": 500, 
             "translatedLanguage[]": [target_lang, "no"], 
             "order[chapter]": "desc",
-            "contentRating[]": ["safe", "suggestive", "erotica", "pornographic"]
+            "contentRating[]": ["safe"] if session.get('safe_mode') else ["safe", "suggestive", "erotica", "pornographic"]
         }
         
         c_request = requests.get(f"{API_URL}/manga/{id}/feed", params=c_params)
@@ -515,7 +515,7 @@ def manga_details(id):
             unique_chapters.append(chap)
 
         # 4. Recommendations Logic (BULLETPROOF)
-        rec_params = {"limit": 7, "includes[]": ["cover_art"], "contentRating[]": ["safe", "suggestive"]}
+        rec_params = {"limit": 7, "includes[]": ["cover_art"], "contentRating[]": ["safe"] if session.get('safe_mode') else ["safe", "suggestive"]}
         if tag_ids:
             rec_params["includedTags[]"] = tag_ids[:3]
         
@@ -595,7 +595,7 @@ def search():
     statuses = request.args.getlist('status')
     types = request.args.getlist('type')
     demographics = request.args.getlist('demographic')
-    ratings = request.args.getlist('rating') or ["safe", "suggestive"]
+    ratings = request.args.getlist('rating') or (["safe"] if session.get('safe_mode') else ["safe", "suggestive"])
     sort_by = request.args.get('sort', 'relevance')
     order_dir = request.args.get('order', 'desc')
     
@@ -1038,6 +1038,16 @@ def admin_picks_info():
     except Exception:
         return jsonify({"result": "error", "data": []}), 502
 
+# ==========================================
+# SAFE SORT SWITCH 
+# ==========================================
+@app.route('/api/toggle-safe-mode', methods=['POST'])
+def toggle_safe_mode():
+    data = request.json
+    # Lưu trạng thái (True/False) vào session trình duyệt của người dùng
+    session['safe_mode'] = data.get('safe_mode', False)
+    session.modified = True
+    return jsonify({"success": True, "safe_mode": session['safe_mode']})
 
 # --- SUPPORT US ---
 @app.route('/support-us')
