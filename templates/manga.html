@@ -6,6 +6,11 @@
     <meta name="referrer" content="no-referrer" />
     <script src="https://cdn.tailwindcss.com"></script>
     <title>{{ manga.title }} - MangaLocal</title>
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='js/logo.png') }}"
+      type="image/png"
+    />
     <style>
       /* CSS Hiệu ứng nav trong suốt khi ở đỉnh trang (Dùng chung logic JS với index) */
       body.nav-transparent nav {
