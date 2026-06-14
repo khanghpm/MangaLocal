@@ -43,6 +43,97 @@ login_manager.login_view = 'index' # Redirect to home if login is required
 API_URL = "https://api.mangadex.org"
 
 # ==========================================
+# TỪ ĐIỂN UI (Cho cả HTML và Flash Messages)
+# ==========================================
+UI_LANGUAGES = {
+    'en': {
+        'home': 'Home', 'search': 'Search', 'random': 'Random', 
+        'login': 'Login', 'logout': 'Logout', 'interface_lang': 'Language',
+        'bookmarks': 'Bookmarks', 'history': 'History', 'subscription': 'Subscription',
+        'settings': 'Settings', 'command_center': 'Command Center', 'safe_content': 'Safe Content',
+        # Flash Messages
+        'flash_pwd_mismatch': 'Passwords do not match!',
+        'flash_email_exists': 'Email already exists! Please log in or use a different email.',
+        'flash_register_success': 'Registration successful! Welcome aboard!',
+        'flash_register_error': 'An unexpected error occurred during registration.',
+        'flash_login_empty': 'Email and password are required!',
+        'flash_login_invalid': 'Invalid email or password!',
+        'flash_login_success': 'Welcome back, {}!',
+        'flash_login_error': 'An unexpected error occurred during login.',
+        'flash_email_not_found': 'Email not found.',
+        'flash_reset_invalid': 'The reset link is invalid or has expired.',
+        'flash_pwd_updated': 'Password updated successfully!',
+        'flash_api_error': 'API Error: {}',
+        'flash_safe_mode': 'This title is hidden by Safe Content mode.',
+        'flash_email_in_use': 'That email is already in use.',
+        'flash_general_settings_updated': 'General settings updated successfully!',
+        'flash_old_pwd_incorrect': 'Incorrect old password. Changes denied.',
+        'flash_enter_new_pwd': 'Please enter a new password.',
+        'flash_chapter_not_found': 'Chapter not found!',
+        'flash_invalid_chapter': 'Invalid chapter data!',
+        'flash_guest_limit': 'Guests can only read 1 manga per day. Please log in for more!',
+        'flash_user_limit': 'You have reached your daily limit of 4 manga. Upgrade to Premium for unlimited reading!',
+        'flash_no_pages': 'No pages found for this chapter!',
+        'flash_unexpected_error': 'An unexpected error occurred! Please try again.',
+        'flash_supporter_updated': 'Updated supporter status for {}',
+        'flash_user_deleted': 'User permanently deleted.',
+        'flash_pick_added': 'Manga added to Featured Picks!',
+        'flash_pick_removed': 'Manga removed from Featured Picks.',
+        'flash_payment_success': 'Payment successful! You are now a MangaLocal Supporter.'
+    },
+    'vi': {
+        'home': 'Trang chủ', 'search': 'Tìm kiếm', 'random': 'Ngẫu nhiên', 
+        'login': 'Đăng nhập', 'logout': 'Đăng xuất', 'interface_lang': 'Ngôn ngữ',
+        'bookmarks': 'Đánh dấu', 'history': 'Lịch sử', 'subscription': 'Gói Premium',
+        'settings': 'Cài đặt', 'command_center': 'Bảng điều khiển', 'safe_content': 'Nội dung an toàn',
+        # Flash Messages
+        'flash_pwd_mismatch': 'Mật khẩu không khớp!',
+        'flash_email_exists': 'Email đã tồn tại! Vui lòng đăng nhập hoặc dùng email khác.',
+        'flash_register_success': 'Đăng ký thành công! Chào mừng bạn!',
+        'flash_register_error': 'Đã xảy ra lỗi không mong muốn trong quá trình đăng ký.',
+        'flash_login_empty': 'Vui lòng nhập đầy đủ email và mật khẩu!',
+        'flash_login_invalid': 'Email hoặc mật khẩu không chính xác!',
+        'flash_login_success': 'Chào mừng trở lại, {}!',
+        'flash_login_error': 'Đã xảy ra lỗi không mong muốn trong quá trình đăng nhập.',
+        'flash_email_not_found': 'Không tìm thấy email.',
+        'flash_reset_invalid': 'Liên kết đặt lại không hợp lệ hoặc đã hết hạn.',
+        'flash_pwd_updated': 'Cập nhật mật khẩu thành công!',
+        'flash_api_error': 'Lỗi API: {}',
+        'flash_safe_mode': 'Truyện này bị ẩn do đang bật Nội dung An toàn.',
+        'flash_email_in_use': 'Email này đã được sử dụng.',
+        'flash_general_settings_updated': 'Cập nhật thông tin thành công!',
+        'flash_old_pwd_incorrect': 'Mật khẩu cũ không đúng. Từ chối thay đổi.',
+        'flash_enter_new_pwd': 'Vui lòng nhập mật khẩu mới.',
+        'flash_chapter_not_found': 'Không tìm thấy chương!',
+        'flash_invalid_chapter': 'Dữ liệu chương không hợp lệ!',
+        'flash_guest_limit': 'Khách chỉ được đọc 1 truyện/ngày. Vui lòng đăng nhập để đọc thêm!',
+        'flash_user_limit': 'Bạn đã đạt giới hạn 4 truyện/ngày. Hãy nâng cấp Supporter để đọc không giới hạn!',
+        'flash_no_pages': 'Không tìm thấy trang truyện nào cho chương này!',
+        'flash_unexpected_error': 'Đã xảy ra lỗi không mong muốn! Vui lòng thử lại.',
+        'flash_supporter_updated': 'Đã cập nhật trạng thái Supporter cho {}',
+        'flash_user_deleted': 'Đã xóa người dùng vĩnh viễn.',
+        'flash_pick_added': 'Đã thêm truyện vào danh sách nổi bật!',
+        'flash_pick_removed': 'Đã gỡ truyện khỏi danh sách nổi bật.',
+        'flash_payment_success': 'Thanh toán thành công! Bạn hiện là MangaLocal Supporter.'
+    }
+}
+def get_t(key):
+    lang = session.get('ui_lang', 'en')
+    return UI_LANGUAGES.get(lang, UI_LANGUAGES['en']).get(key, key)
+
+@app.context_processor
+def inject_t():
+    return dict(t=get_t, current_ui_lang=session.get('ui_lang', 'en'))
+
+@app.route('/api/toggle-ui-lang', methods=['POST'])
+def toggle_ui_lang():
+    current_lang = session.get('ui_lang', 'en')
+    session['ui_lang'] = 'vi' if current_lang == 'en' else 'en'
+    session.modified = True
+    return jsonify({"success": True})
+# ==========================================
+
+# ==========================================
 # SAFE CONTENT FILTER & TAGS MAP
 # ==========================================
 
@@ -155,13 +246,13 @@ def register():
         
         # 3. Check passwords match
         if password != confirm_password:
-            flash('Passwords do not match!', 'error')
+            flash(get_t('flash_pwd_mismatch'), 'error')
             return redirect(url_for('index'))
         
         # 4. Check if email already exists
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
-            flash('Email already exists! Please log in or use a different email.', 'error')
+            flash(get_t('flash_email_exists'), 'error')
             return redirect(url_for('index'))
         
         # 5. Create new user
@@ -179,7 +270,7 @@ def register():
         db.session.commit()
         
         login_user(new_user)
-        flash('Registration successful! Welcome aboard!', 'success')
+        flash(get_t('flash_register_success'), 'success')
         return redirect(url_for('index'))
     
     except ValidationError as e:
@@ -187,7 +278,7 @@ def register():
         return redirect(url_for('index'))
     except Exception as e:
         print(f"Registration error: {e}")
-        flash('An unexpected error occurred during registration.', 'error')
+        flash(get_t('flash_register_error'), 'error')
         return redirect(url_for('index'))
 
 @app.route('/login', methods=['POST'])
@@ -198,7 +289,7 @@ def login():
     try:
         # 1. Validate inputs not empty
         if not email or not password:
-            flash('Email and password are required!', 'error')
+            flash(get_t('flash_login_empty'), 'error')
             return redirect(url_for('index'))
         
         # 2. Find user
@@ -206,17 +297,17 @@ def login():
         
         # 3. Check credentials
         if not user or not check_password_hash(user.password, password):
-            flash('Invalid email or password!', 'error')
+            flash(get_t('flash_login_invalid'), 'error')
             return redirect(url_for('index'))
         
         # 4. Login user
         login_user(user)
-        flash(f'Welcome back, {current_user.username}!', 'success')
+        flash(get_t('flash_login_success').format(current_user.username), 'success')
         return redirect(url_for('index'))
     
     except Exception as e:
         print(f"Login error: {e}")
-        flash('An unexpected error occurred during login.', 'error')
+        flash(get_t('flash_login_error'), 'error')
         return redirect(url_for('index'))
 
 @app.route('/logout')
@@ -236,7 +327,7 @@ def forgot_password():
         # Redirect straight to the reset page (Option 1)
         return redirect(url_for('reset_with_token', token=token))
     else:
-        flash("Email not found.", "error")
+        flash(get_t('flash_email_not_found'), "error")
         return redirect(url_for('index'))
     
 @app.route('/reset/<token>', methods=['GET', 'POST'])
@@ -245,7 +336,7 @@ def reset_with_token(token):
         # Check if the token is valid (expires in 30 mins)
         email = ts.loads(token, salt="recover-key", max_age=1800)
     except:
-        flash("The reset link is invalid or has expired.", "error")
+        flash(get_t('flash_reset_invalid'), "error")
         return redirect(url_for('index'))
 
     if request.method == 'POST':
@@ -256,7 +347,7 @@ def reset_with_token(token):
         user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
         db.session.commit()
         
-        flash("Password updated successfully!", "success")
+        flash(get_t('flash_pwd_updated'), "success")
         return redirect(url_for('index'))
 
     return render_template('reset_password.html', token=token)
@@ -361,7 +452,7 @@ def index():
                 "author": author_name
             })
     except APIError as e:
-        flash(f"Failed to load hot updates: {e}", "warning")
+        flash(get_t('flash_api_error').format(e), "warning")
         manga_data = []
 
     # 2. Fetch Admin Curated Picks
@@ -392,7 +483,7 @@ def index():
                     "type": "Manga" if attrs.get('originalLanguage') == 'ja' else "Manhwa/Manhua"
                 })
     except APIError as e:
-        flash(f"Failed to load admin picks: {e}", "warning")
+        flash(get_t('flash_api_error').format(e), "warning")
 
     # 3. Fetch "Recommendations"
     rec_data = []
@@ -429,7 +520,7 @@ def index():
                 "type": "Manga" if attrs.get('originalLanguage') == 'ja' else "Manhwa/Manhua"
             })
     except APIError as e:
-        flash(f"Failed to load recommendations: {e}", "warning")
+        flash(get_t('flash_api_error').format(e), "warning")
 
     return render_template('index.html', manga_list=manga_data, rec_list=rec_data, admin_list=admin_data, next_offset=20)
 
@@ -502,7 +593,7 @@ def manga_details(id):
 
         # SAFE CONTENT GUARD: chặn truy cập trực tiếp truyện 18+ khi Safe đang bật
         if attr.get('contentRating') not in allowed_ratings():
-            flash("This title is hidden by Safe Content mode.", "error")
+            flash(get_t('flash_safe_mode'), "error")
             return redirect('/')
         
         # 2. Extract available languages for the switcher menu
@@ -675,7 +766,7 @@ def search():
         for group in tag_groups:
             tag_groups[group] = sorted(tag_groups[group], key=lambda x: x['name'])
     except APIError as e:
-        flash(f"Failed to load tags: {e}", "warning")
+        flash(get_t('flash_api_error').format(e), "warning")
 
     is_discovery = not any([query, statuses, types, included_tags, demographics])
 
@@ -726,7 +817,7 @@ def search():
                 "type": "Manga" if attrs.get('originalLanguage') == 'ja' else "Manhwa/Manhua"
             })
     except APIError as e:
-        flash(f"Search failed: {e}", "error")
+        flash(get_t('flash_api_error').format(e), "error")
         manga_data = []
 
     if request.args.get('ajax'):
@@ -764,7 +855,7 @@ def setting():
             if new_email and new_email != current_user.email:
                 existing = User.query.filter_by(email=new_email).first()
                 if existing:
-                    flash("That email is already in use.", "error")
+                    flash(get_t('flash_email_in_use'), "error")
                     return redirect(url_for('setting'))
                 current_user.email = new_email
                 
@@ -774,7 +865,7 @@ def setting():
                 current_user.profile_pic = new_pic
                 
             db.session.commit()
-            flash("General settings updated successfully!", "success")
+            flash(get_t('flash_general_settings_updated'), "success")
 
         # --- SECURITY TAB SUBMISSION ---
         elif action == 'update_security':
@@ -783,14 +874,14 @@ def setting():
             
             # Verify the old password first
             if not check_password_hash(current_user.password, old_password):
-                flash("Incorrect old password. Changes denied.", "error")
+                flash(get_t('flash_old_pwd_incorrect'), "error")
             elif new_password:
                 # If verified, hash and save the new password
                 current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
                 db.session.commit()
-                flash("Password updated successfully!", "success")
+                flash(get_t('flash_pwd_updated'), "success")
             else:
-                flash("Please enter a new password.", "error")
+                flash(get_t('flash_enter_new_pwd'), "error")
 
         return redirect(url_for('setting'))
         
@@ -835,7 +926,7 @@ def search_suggestions():
             attrs = manga.get('attributes', {})
             title = attrs.get('title', {}).get('en', '') or list(attrs.get('title', {}).values())[0]
             
-            # Extract cover[cite: 2]
+            # Extract cover
             cover_file = ""
             for rel in manga.get('relationships', []):
                 if rel.get('type') == 'cover_art':
@@ -863,7 +954,7 @@ def reader(chapter_id):
         c_data = c_resp.get('data', {})
         
         if not c_data:
-            flash("Chapter not found!", "error")
+            flash(get_t('flash_chapter_not_found'), "error")
             return redirect('/')
 
         # SYNC FIX: Detect the language of this specific chapter
@@ -871,7 +962,7 @@ def reader(chapter_id):
         
         manga_id = next((r['id'] for r in c_data.get('relationships', []) if r['type'] == 'manga'), None)
         if not manga_id:
-            flash("Invalid chapter data!", "error")
+            flash(get_t('flash_invalid_chapter'), "error")
             return redirect('/')
             
         attrs = c_data.get('attributes', {})
@@ -884,7 +975,7 @@ def reader(chapter_id):
 
         # SAFE CONTENT GUARD: chặn đọc chương của truyện 18+ khi Safe đang bật
         if m_data.get('attributes', {}).get('contentRating') not in allowed_ratings():
-            flash("This title is hidden by Safe Content mode.", "error")
+            flash(get_t('flash_safe_mode'), "error")
             return redirect('/')
         m_title = m_data.get('attributes', {}).get('title', {}).get('en') or \
                   next(iter(m_data.get('attributes', {}).get('title', {}).values()), "Untitled")
@@ -907,7 +998,7 @@ def reader(chapter_id):
                 
             if manga_id not in session['guest_reads']:
                 if len(session['guest_reads']) >= 1:
-                    flash("Guests can only read 1 manga per day. Please log in for more!", "error")
+                    flash(get_t('flash_guest_limit'), "error")
                     return redirect('/')
                 session['guest_reads'].append(manga_id)
                 session.modified = True
@@ -926,7 +1017,7 @@ def reader(chapter_id):
                 
             if manga_id not in session['user_reads']:
                 if tracker.count >= 4:
-                    flash("You have reached your daily limit of 4 manga. Upgrade to Premium for unlimited reading!", "error")
+                    flash(get_t('flash_user_limit'), "error")
                     return redirect('/support-us')
                 
                 tracker.count += 1
@@ -972,7 +1063,7 @@ def reader(chapter_id):
             path_type = 'data'
         
         if not chapter_hash or not filenames:
-            flash("No pages found for this chapter!", "error")
+            flash(get_t('flash_no_pages'), "error")
             return redirect(f"/manga/{manga_id}")
 
         image_urls = [f"{base_url}/{path_type}/{chapter_hash}/{f}" for f in filenames]
@@ -1016,11 +1107,11 @@ def reader(chapter_id):
         )
 
     except APIError as e:
-        flash(f"Error loading chapter: {e}", "error")
+        flash(get_t('flash_api_error').format(e), "error")
         return redirect('/')
     except Exception as e:
         print(f"CRITICAL ERROR IN READER: {e}")
-        flash("An unexpected error occurred! Please try again.", "error")
+        flash(get_t('flash_unexpected_error'), "error")
         return redirect('/')
 
 @app.route('/privacy')
@@ -1043,7 +1134,7 @@ def admin_dashboard():
             if user:
                 user.is_supporter = not user.is_supporter # Flips True to False, or False to True
                 db.session.commit()
-                flash(f"Updated supporter status for {user.email}", "success")
+                flash(get_t('flash_supporter_updated').format(user.email), "success")
                 
         elif action == 'delete_user':
             user = User.query.get(request.form.get('user_id'))
@@ -1052,7 +1143,7 @@ def admin_dashboard():
                 # Optional: Delete their daily reads/bookmarks too if you set up cascades
                 db.session.delete(user)
                 db.session.commit()
-                flash("User permanently deleted.", "error")
+                flash(get_t('flash_user_deleted'), "error")
                 
         # --- MANGA CURATION ACTIONS ---
         elif action == 'add_pick':
@@ -1061,14 +1152,14 @@ def admin_dashboard():
                 new_pick = AdminPick(manga_id=manga_id)
                 db.session.add(new_pick)
                 db.session.commit()
-                flash("Manga added to Featured Picks!", "success")
+                flash(get_t('flash_pick_added'), "success")
                 
         elif action == 'remove_pick':
             pick = AdminPick.query.get(request.form.get('pick_id'))
             if pick:
                 db.session.delete(pick)
                 db.session.commit()
-                flash("Manga removed from Featured Picks.", "error")
+                flash(get_t('flash_pick_removed'), "error")
                 
         return redirect('/admin')
 
@@ -1128,7 +1219,7 @@ def process_upgrade():
     current_user.is_supporter = True
     db.session.commit()
     
-    flash("Payment successful! You are now a MangaLocal Supporter.", "success")
+    flash(get_t('flash_payment_success'), "success")
     return redirect(url_for('setting')) # Redirect them to settings to see their new badge!
 
 # --- STARTUP ---

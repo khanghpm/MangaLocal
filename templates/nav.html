@@ -152,36 +152,37 @@
                 href="/bookmarks"
                 class="flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition"
               >
-                <span class="text-base">🔖</span> Bookmarks
+                <span class="text-base">🔖</span> {{ t('bookmarks') }}
               </a>
               <a
                 href="/history"
                 class="flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition"
               >
-                <span class="text-base">🕒</span> History
+                <span class="text-base">🕒</span> {{ t('history') }}
               </a>
               <a
                 href="/support-us"
                 class="flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-orange-500 hover:bg-orange-500/10 rounded-lg transition"
               >
-                <span class="text-base">💎</span> Subscription
+                <span class="text-base">💎</span> {{ t('subscription') }}
               </a>
               <a
                 href="/setting"
                 class="flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition"
               >
-                <span class="text-base">⚙️</span> Settings
+                <span class="text-base">⚙️</span> {{ t('settings') }}
               </a>
               {% if current_user.is_admin %}
                 <a
                   href="/admin"
                   class="flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-yellow-500 hover:bg-yellow-500/10 rounded-lg transition"
                 >
-                  <span class="text-base">⚡</span> Command Center
+                  <span class="text-base">⚡</span> {{ t('command_center') }}
                 </a>
               {% endif %}
+
               <div class="h-px bg-gray-800 my-1 mx-2"></div>
-              <!-- NÚT CÔNG TẮC SAFE CONTENT -->
+
               <div
                 onclick="toggleSafeMode(event)"
                 class="flex items-center justify-between px-3 py-2.5 hover:bg-white/5 rounded-lg transition cursor-pointer group"
@@ -189,31 +190,57 @@
                 <div
                   class="flex items-center gap-3 text-[11px] font-bold text-gray-400 group-hover:text-white transition"
                 >
-                  <span class="text-base">🛡️</span> Safe Content
+                  <span class="text-base">🛡️</span> {{ t('safe_content') }}
                 </div>
-                <!-- Track & Thumb của Công tắc -->
                 <button
                   type="button"
                   aria-label="Toggle Safe Content"
                   class="relative inline-flex h-4 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none"
                 >
-                  <!-- Thanh chạy (Track) -->
                   <span
                     id="safe-toggle-track"
                     class="pointer-events-none absolute mx-auto h-3 w-8 rounded-full transition-colors duration-200 ease-in-out {% if session.get('safe_mode_v2', True) %}bg-orange-500{% else %}bg-gray-600{% endif %}"
                   ></span>
-
                   <span
                     id="safe-toggle-thumb"
                     class="pointer-events-none absolute left-0 inline-block h-4 w-4 transform rounded-full border border-gray-300 bg-white shadow-sm transition-transform duration-200 ease-in-out {% if session.get('safe_mode_v2', True) %}translate-x-4{% else %}translate-x-0{% endif %}"
                   ></span>
                 </button>
               </div>
+
+              <div
+                onclick="toggleUiLang(event)"
+                class="flex items-center justify-between px-3 py-2.5 hover:bg-white/5 rounded-lg transition cursor-pointer group"
+              >
+                <div
+                  class="flex items-center gap-3 text-[11px] font-bold text-gray-400 group-hover:text-white transition"
+                >
+                  <span class="flex items-center justify-center w-5">
+                    {% if current_ui_lang == 'vi' %}
+                      <img
+                        src="https://flagcdn.com/w20/vn.png"
+                        width="20"
+                        class="rounded-[2px]"
+                        alt="VN"
+                      />
+                    {% else %}
+                      <img
+                        src="https://flagcdn.com/w20/gb.png"
+                        width="20"
+                        class="rounded-[2px]"
+                        alt="GB"
+                      />
+                    {% endif %}
+                  </span>
+                  <span>{{ t('interface_lang') }}</span>
+                </div>
+              </div>
+
               <a
                 href="/logout"
                 class="flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition"
               >
-                <span class="text-base">➡</span> Logout
+                <span class="text-base">➡</span> {{ t('logout') }}
               </a>
             </div>
           </div>
@@ -222,7 +249,7 @@
         <div
           onclick="toggleSafeMode(event)"
           class="flex items-center gap-2 px-3 py-2 mr-2 hover:bg-white/5 rounded-lg transition cursor-pointer group"
-          title="Toggle Safe Content"
+          title="{{ t('safe_content') }}"
         >
           <span class="text-sm group-hover:scale-110 transition-transform"
             >🛡️</span
@@ -243,12 +270,36 @@
           </button>
         </div>
 
-        <button
-          onclick="openAuth()"
-          class="text-sm font-bold bg-gray-800 px-4 py-2 rounded hover:bg-gray-700 transition border border-gray-700 shadow-lg"
-        >
-          Login
-        </button>
+        <div class="flex items-center gap-4">
+          <button
+            onclick="toggleUiLang(event)"
+            class="hover:scale-110 transition cursor-pointer flex items-center justify-center mt-1"
+            title="{{ t('interface_lang') }}"
+          >
+            {% if current_ui_lang == 'vi' %}
+              <img
+                src="https://flagcdn.com/w40/vn.png"
+                width="26"
+                class="rounded-[2px] shadow-sm"
+                alt="Tiếng Việt"
+              />
+            {% else %}
+              <img
+                src="https://flagcdn.com/w40/gb.png"
+                width="26"
+                class="rounded-[2px] shadow-sm"
+                alt="English"
+              />
+            {% endif %}
+          </button>
+
+          <button
+            onclick="openAuth()"
+            class="text-sm font-bold bg-gray-800 px-4 py-2 rounded hover:bg-gray-700 transition border border-gray-700 shadow-lg"
+          >
+            {{ t('login') }}
+          </button>
+        </div>
       {% endif %}
     </div>
   </div>

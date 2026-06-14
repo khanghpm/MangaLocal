@@ -1041,6 +1041,20 @@ window.toggleSafeMode = async function (event) {
  }
 }
 
+window.toggleUiLang = async function (event) {
+ if (event) event.stopPropagation() // Ngăn dropdown bị đóng đột ngột
+ try {
+  const resp = await fetch("/api/toggle-ui-lang", {
+   method: "POST",
+  })
+  if (resp.ok) {
+   window.location.reload() // Tải lại trang để áp dụng ngôn ngữ mới (đổi cờ, đổi chữ)
+  }
+ } catch (error) {
+  console.error("Lỗi đổi ngôn ngữ:", error)
+ }
+}
+
 // ============================================================
 //  AUTO-HIDE NAV LOGIC — chạy cho cả 4 mode đọc
 //  - Long strip : theo dõi window.scrollY
