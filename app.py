@@ -2,7 +2,7 @@ import requests, os
 from validators import ValidationError, validate_email, validate_password, validate_username, validate_search_query
 from itsdangerous import URLSafeTimedSerializer
 from datetime import datetime, date
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, abort, g
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from functools import wraps
@@ -156,6 +156,25 @@ NSFW_TAGS = [
     "5bd0e105-4481-44ca-b6e7-7544da56b1a3"  # Incest / Loạn luân
 ]
 
+# ==========================================
+# BAN MANGA SYSTEM
+# ==========================================
+def get_banned_ids():
+    """Set các manga_id bị ban — cache trong request context để không query nhiều lần."""
+    if not hasattr(g, '_banned_ids'):
+        g._banned_ids = {b.manga_id for b in BannedManga.query.all()}
+    return g._banned_ids
+
+def filter_banned(manga_list):
+    """Lọc bỏ manga bị ban khỏi danh sách dict (có key 'id')."""
+    banned = get_banned_ids()
+    if not banned: return manga_list
+    return [m for m in manga_list if m.get('id') not in banned]
+
+def is_manga_banned(manga_id):
+    return manga_id in get_banned_ids()
+
+
 TAGS_MAP = {
     "Action": "391b0423-d847-456f-bbb0-8b094c10c1d1",
     "Adventure": "87dbfd80-3846-47ab-b541-9392228d7711",
@@ -198,6 +217,12 @@ class AdminPick(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     manga_id = db.Column(db.String(100), unique=True, nullable=False)
     added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class BannedManga(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    manga_id = db.Column(db.String(100), unique=True, nullable=False)
+    reason = db.Column(db.String(255), default='')
+    banned_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Bookmark(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -408,6 +433,7 @@ def index():
             "limit": 20, 
             "includes[]": ["cover_art", "author"],
             "contentRating[]": allowed_ratings()
+
         }
         if safe_mode_on():
             if "excludedTags[]" in params:
@@ -522,7 +548,7 @@ def index():
     except APIError as e:
         flash(get_t('flash_api_error').format(e), "warning")
 
-    return render_template('index.html', manga_list=manga_data, rec_list=rec_data, admin_list=admin_data, next_offset=20)
+    return render_template('index.html', manga_list=filter_banned(manga_data), rec_list=filter_banned(rec_data), admin_list=filter_banned(admin_data), next_offset=20)
 
 @app.route('/api/load-more-hot')
 def load_more_hot():
@@ -567,7 +593,7 @@ def load_more_hot():
             return ""
             
         # Match your exact template file name and your 'manga_list' variable name
-        return render_template('manga grid partial.html', manga_list=manga_data)
+        return render_template('manga grid partial.html', manga_list=filter_banned(manga_data))
         
     except Exception as e:
         print(f"Database/API Error: {e}")
@@ -576,6 +602,11 @@ def load_more_hot():
 
 @app.route('/manga/<id>')
 def manga_details(id):
+    # BAN GUARD: chặn truy cập manga bị ban
+    if is_manga_banned(id):
+        flash("This manga has been removed by administrator.", "error")
+        return redirect('/')
+
     # 1. Get the target language from the URL query parameters (default to 'en')
     target_lang = request.args.get('lang', 'en')
 
@@ -820,6 +851,8 @@ def search():
         flash(get_t('flash_api_error').format(e), "error")
         manga_data = []
 
+    manga_data = filter_banned(manga_data)
+
     if request.args.get('ajax'):
         return render_template('manga grid partial.html', manga_list=manga_data)
 
@@ -894,8 +927,11 @@ def random_manga():
     if safe_mode_on():
         params["excludedTags[]"] = NSFW_TAGS
         
-    response = requests.get(f"{API_URL}/manga/random", params=params).json()
-    manga_id = response['data']['id']
+    for _ in range(5):
+        response = requests.get(f"{API_URL}/manga/random", params=params).json()
+        manga_id = response['data']['id']
+        if not is_manga_banned(manga_id):
+            return redirect(f"/manga/{manga_id}")
     return redirect(f"/manga/{manga_id}")
 
 @app.route('/api/search_suggestions')
@@ -940,7 +976,7 @@ def search_suggestions():
                 "cover": cover_url
             })
         
-        return jsonify(results)
+        return jsonify(filter_banned(results))
     except Exception as e:
         print(f"Error: {e}")
         return jsonify([])
@@ -972,6 +1008,11 @@ def reader(chapter_id):
         # 2. Get Manga Title AND Cover Art
         m_resp = fetch_manga_detail(manga_id)
         m_data = m_resp.get('data', {})
+
+        # BAN GUARD
+        if is_manga_banned(manga_id):
+            flash("This manga has been removed by administrator.", "error")
+            return redirect('/')
 
         # SAFE CONTENT GUARD: chặn đọc chương của truyện 18+ khi Safe đang bật
         if m_data.get('attributes', {}).get('contentRating') not in allowed_ratings():
@@ -1161,12 +1202,30 @@ def admin_dashboard():
                 db.session.commit()
                 flash(get_t('flash_pick_removed'), "error")
                 
+        elif action == 'ban_manga':
+            manga_id = request.form.get('manga_id', '').strip()
+            reason = request.form.get('reason', '').strip()
+            if manga_id and not BannedManga.query.filter_by(manga_id=manga_id).first():
+                db.session.add(BannedManga(manga_id=manga_id, reason=reason))
+                db.session.commit()
+                flash(f"Manga {manga_id[:8]}… banned.", "success")
+            else:
+                flash("ID is empty or already banned.", "error")
+
+        elif action == 'unban_manga':
+            ban = BannedManga.query.get(request.form.get('ban_id'))
+            if ban:
+                db.session.delete(ban)
+                db.session.commit()
+                flash("Manga unbanned.", "success")
+
         return redirect('/admin')
 
     # Fetch all data to display on the dashboard
     users = User.query.all()
     picks = AdminPick.query.all()
-    return render_template('admin.html', users=users, picks=picks)
+    banned = BannedManga.query.order_by(BannedManga.banned_at.desc()).all()
+    return render_template('admin.html', users=users, picks=picks, banned=banned)
 
 
 @app.route("/api/admin/picks-info")
